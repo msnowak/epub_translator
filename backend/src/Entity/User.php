@@ -38,7 +38,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private \DateTimeImmutable $createdAt;
 
     /**
-     * Nigdy nie trafia do bazy - tylko nosnik hasla z formularza rejestracji.
+     * Never persisted - only carries the password from the registration form.
      */
     #[Assert\NotBlank(message: 'Podaj hasło.', groups: ['registration'])]
     #[Assert\Length(min: 8, minMessage: 'Hasło musi mieć co najmniej {{ limit }} znaków.', groups: ['registration'])]
@@ -111,7 +111,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getUserIdentifier(): string
     {
-        assert($this->email !== '');
+        // UserInterface promises a non-empty identifier. The property defaults to
+        // an empty string for Doctrine hydration, so guard with a real throw
+        // rather than assert() - assertions compile out under zend.assertions=-1.
+        if ('' === $this->email) {
+            throw new \LogicException('User has no email, so it has no security identifier.');
+        }
 
         return $this->email;
     }
