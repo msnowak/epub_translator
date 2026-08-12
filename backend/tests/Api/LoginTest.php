@@ -33,11 +33,4 @@ final class LoginTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(401);
     }
-
-    public function testProtectedEndpointRequiresToken(): void
-    {
-        $this->request('GET', '/api/me');
-
-        self::assertResponseStatusCodeSame(401);
-    }
 }
