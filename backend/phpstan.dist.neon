@@ -1,0 +1,21 @@
+parameters:
+    level: 8
+    paths:
+        - src
+        - tests
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+
+    ignoreErrors:
+        # Symfony skeleton boilerplate: Kernel::getAllowedEnvs() overrides a private
+        # method from MicroKernelTrait; PHPStan cannot see the trait's internal call to it.
+        - message: '#Method App\\Kernel::getAllowedEnvs\(\) is unused#'
+          path: src/Kernel.php
+        # Symfony skeleton boilerplate: BC guard kept in case an older symfony/dotenv is
+        # installed; always true with the version currently required, by design.
+        - message: '#Call to function method_exists\(\) with .Symfony\\\\Component\\\\Dotenv\\\\Dotenv. and .bootEnv. will always evaluate to true#'
+          path: tests/bootstrap.php
+
+includes:
+    - vendor/phpstan/phpstan-symfony/extension.neon
+    - vendor/phpstan/phpstan-doctrine/extension.neon
