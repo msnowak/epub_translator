@@ -4,27 +4,45 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Post;
 use App\Repository\UserRepository;
+use App\State\RegisterUserProcessor;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
 #[UniqueEntity(fields: ['email'], message: 'Konto z tym adresem e-mail już istnieje.')]
+#[ApiResource(
+    operations: [
+        new Post(
+            uriTemplate: '/register',
+            status: 201,
+            processor: RegisterUserProcessor::class,
+            normalizationContext: ['groups' => ['user:read']],
+            denormalizationContext: ['groups' => ['user:write']],
+            validationContext: ['groups' => ['Default', 'registration']],
+        ),
+    ],
+)]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
+    #[Groups(['user:read'])]
     private Uuid $id;
 
     #[ORM\Column(length: 180, unique: true)]
     #[Assert\NotBlank(message: 'Podaj adres e-mail.')]
     #[Assert\Email(message: 'To nie jest poprawny adres e-mail.')]
+    #[Groups(['user:read', 'user:write'])]
     private string $email = '';
 
     #[ORM\Column]
@@ -35,6 +53,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private array $roles = [];
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    #[Groups(['user:read'])]
     private \DateTimeImmutable $createdAt;
 
     /**
@@ -42,6 +61,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     #[Assert\NotBlank(message: 'Podaj hasło.', groups: ['registration'])]
     #[Assert\Length(min: 8, minMessage: 'Hasło musi mieć co najmniej {{ limit }} znaków.', groups: ['registration'])]
+    #[Groups(['user:write'])]
     private ?string $plainPassword = null;
 
     public function __construct()
