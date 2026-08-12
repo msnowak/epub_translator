@@ -1,3 +1,22 @@
 _security_logout:
     resource: security.route_loader.logout
     type: service
+
+# The json_login authenticator on the "login" firewall intercepts requests to
+# this path before they reach a controller, but the router still needs a
+# matching route or it throws a 404 before the firewall gets a chance to run
+# (RouterListener has a higher kernel.request priority than the firewall).
+api_login_check:
+    path: /api/login_check
+    methods: [POST]
+
+# Fallback for any /api path with no matching route (e.g. an endpoint from a
+# later task that doesn't exist yet). Without this, RouterListener 404s
+# before the "api" firewall's access_control ever runs, leaking a 404
+# instead of a 401 for a protected-but-undefined path. Placed last so it is
+# compiled after routing.controllers (config/routes.yaml) and never shadows
+# a real controller route added later.
+api_unmapped:
+    path: /api/{path}
+    requirements:
+        path: .*
