@@ -51,6 +51,11 @@ services:
         condition: service_healthy
     environment: *backend_env
     command: php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M -vv
+    # The FrankenPHP image probes an HTTP port. This container is a CLI consumer
+    # that never opens one, so the inherited check would report "unhealthy"
+    # forever - and any later depends_on: condition: service_healthy would hang.
+    healthcheck:
+      disable: true
     volumes:
       - ./backend:/app
       - storage:/app/var/storage
