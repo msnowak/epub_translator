@@ -22,7 +22,7 @@ class RefreshToken
     private User $user;
 
     /**
-     * Przechowujemy wylacznie skrot - wyciek bazy nie daje gotowych tokenow.
+     * Only the hash is stored - a database leak yields no usable tokens.
      */
     #[ORM\Column(length: 64, unique: true)]
     private string $tokenHash;

@@ -12,7 +12,7 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationSuccessHandlerInterface;
 
 /**
- * Owija handler Lexika i dokleja do odpowiedzi cookie z tokenem odswiezajacym.
+ * Wraps Lexik's handler and attaches the refresh token cookie to the response.
  */
 final readonly class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterface
 {

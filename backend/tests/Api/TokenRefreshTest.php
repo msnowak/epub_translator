@@ -35,7 +35,20 @@ final class TokenRefreshTest extends ApiTestCase
         self::assertArrayHasKey('token', $this->payload());
 
         $secondCookie = (string) $this->client->getResponse()->headers->getCookies()[0]->getValue();
-        self::assertNotSame($firstCookie, $secondCookie, 'Refresh token musi być rotowany.');
+        self::assertNotSame($firstCookie, $secondCookie, 'The refresh token must be rotated.');
+    }
+
+    public function testRefreshWorksWhileStaleTokenIsStillAttached(): void
+    {
+        $this->createUser('reader@example.com', 'haslo12345');
+        $this->request('POST', '/api/login_check', ['email' => 'reader@example.com', 'password' => 'haslo12345']);
+
+        // A browser interceptor retries with the stale token still attached -
+        // this is exactly the moment refreshing has to work.
+        $this->request('POST', '/api/token/refresh', token: 'stale.jwt.value');
+
+        self::assertResponseIsSuccessful();
+        self::assertArrayHasKey('token', $this->payload());
     }
 
     public function testOldRefreshTokenStopsWorkingAfterRotation(): void

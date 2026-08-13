@@ -23,4 +23,19 @@ final class RefreshTokenRepository extends ServiceEntityRepository
     {
         return $this->findOneBy(['tokenHash' => $tokenHash]);
     }
+
+    /**
+     * Atomically consumes the token. Returns the number of deleted rows, so of
+     * two concurrent requests carrying the same cookie exactly one sees 1 and
+     * the other sees 0 - without this both would mint valid sessions.
+     */
+    public function deleteByHash(string $tokenHash): int
+    {
+        return (int) $this->createQueryBuilder('t')
+            ->delete()
+            ->where('t.tokenHash = :hash')
+            ->setParameter('hash', $tokenHash)
+            ->getQuery()
+            ->execute();
+    }
 }

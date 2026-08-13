@@ -38,24 +38,32 @@ final readonly class RefreshTokenManager
     }
 
     /**
-     * Zuzywa stary token i wystawia nowy (rotacja).
+     * Consumes the old token and issues a new one (rotation).
      *
      * @return array{0: User, 1: Cookie}
      */
     public function rotate(string $plainToken): array
     {
-        $token = $this->repository->findOneByHash($this->hash($plainToken));
+        $hash = $this->hash($plainToken);
+        $token = $this->repository->findOneByHash($hash);
 
         if (null === $token) {
             throw new InvalidRefreshTokenException('Unknown refresh token.');
         }
 
         $user = $token->getUser();
+        $expired = $token->isExpired(new \DateTimeImmutable());
 
-        $this->entityManager->remove($token);
-        $this->entityManager->flush();
+        // The delete is the claim: the database serialises concurrent DELETEs,
+        // so only one request sees a deleted row. Without it two browser tabs
+        // refreshing at once would each walk away with a valid session chain.
+        if (0 === $this->repository->deleteByHash($hash)) {
+            throw new InvalidRefreshTokenException('Refresh token was already consumed.');
+        }
 
-        if ($token->isExpired(new \DateTimeImmutable())) {
+        // Expiry is checked after the delete on purpose - an expired token must
+        // be consumed rather than left sitting in the table.
+        if ($expired) {
             throw new InvalidRefreshTokenException('Refresh token has expired.');
         }
 

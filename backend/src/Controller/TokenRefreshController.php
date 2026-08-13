@@ -29,8 +29,8 @@ final class TokenRefreshController
         try {
             [$user, $cookie] = $refreshTokenManager->rotate($plainToken);
         } catch (InvalidRefreshTokenException) {
-            // Komunikat trafia do interfejsu, wiec po polsku i bez szczegolow
-            // rozrozniajacych "nieznany" od "wygasly".
+            // This message reaches the UI, so it is Polish and deliberately does
+            // not distinguish "unknown" from "expired".
             return new JsonResponse(['message' => 'Sesja wygasła. Zaloguj się ponownie.'], Response::HTTP_UNAUTHORIZED);
         }
 
