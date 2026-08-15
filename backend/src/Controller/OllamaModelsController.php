@@ -18,7 +18,7 @@ final class OllamaModelsController
         try {
             return new JsonResponse(['models' => $client->listModels()]);
         } catch (OllamaUnavailableException) {
-            // Komunikat trafia do kreatora projektu w interfejsie, wiec po polsku.
+            // This message is rendered in the project wizard, hence Polish.
             return new JsonResponse(
                 ['message' => 'Nie udało się połączyć z serwerem Ollama. Sprawdź konfigurację połączenia.'],
                 Response::HTTP_SERVICE_UNAVAILABLE,

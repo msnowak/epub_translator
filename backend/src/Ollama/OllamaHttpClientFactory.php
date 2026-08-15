@@ -9,8 +9,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class OllamaHttpClientFactory
 {
     /**
-     * Naglowek Authorization dokladamy tylko wtedy, gdy klucz jest ustawiony -
-     * goly serwer Ollama zadnego nie oczekuje.
+     * The Authorization header is attached only when a key is configured -
+     * a bare Ollama server expects none.
      */
     public static function create(
         HttpClientInterface $client,
