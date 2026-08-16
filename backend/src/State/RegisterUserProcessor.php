@@ -32,10 +32,16 @@ final readonly class RegisterUserProcessor implements ProcessorInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): User
     {
-        \assert($data instanceof User);
+        // assert() compiles out under zend.assertions=-1 (php.ini-production),
+        // so these invariants must be real throws rather than assertions.
+        if (!$data instanceof User) {
+            throw new \LogicException(\sprintf('Expected data to be an instance of %s, got %s.', User::class, get_debug_type($data)));
+        }
 
         $plainPassword = $data->getPlainPassword();
-        \assert(null !== $plainPassword);
+        if (null === $plainPassword) {
+            throw new \LogicException('User has no plain password to hash - the registration payload must always provide one.');
+        }
 
         $data->setPassword($this->passwordHasher->hashPassword($data, $plainPassword));
         $data->setPlainPassword(null);

@@ -34,7 +34,11 @@ final readonly class JwtAuthenticationSuccessHandler implements AuthenticationSu
         }
 
         $user = $token->getUser();
-        \assert($user instanceof User);
+        // assert() compiles out under zend.assertions=-1 (php.ini-production),
+        // so this invariant must be a real throw rather than an assertion.
+        if (!$user instanceof User) {
+            throw new \LogicException(\sprintf('Expected the authenticated user to be an instance of %s, got %s.', User::class, get_debug_type($user)));
+        }
 
         $response->headers->setCookie($this->refreshTokenManager->issue($user));
 
