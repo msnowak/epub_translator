@@ -7,6 +7,9 @@ RUN install-php-extensions \
         opcache \
         apcu
 
+COPY --link conf.d/ $PHP_INI_DIR/conf.d/
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
 COPY --from=composer/composer:2-bin /composer /usr/bin/composer
 
 ENV SERVER_NAME=:8000
