@@ -19,5 +19,24 @@ services:
     App\:
         resource: '../src/'
 
+    ollama.http_client:
+        class: Symfony\Contracts\HttpClient\HttpClientInterface
+        factory: ['App\Ollama\OllamaHttpClientFactory', 'create']
+        arguments:
+            $client: '@http_client'
+            $baseUri: '%env(OLLAMA_BASE_URL)%'
+            $apiKey: '%env(OLLAMA_API_KEY)%'
+            $timeout: '%env(float:OLLAMA_TIMEOUT)%'
+
+    App\Ollama\OllamaClient:
+        arguments:
+            $httpClient: '@ollama.http_client'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+when@test:
+    services:
+        ollama.http_client:
+            class: Symfony\Component\HttpClient\MockHttpClient
+            public: true

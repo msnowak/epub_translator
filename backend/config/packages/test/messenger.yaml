@@ -1,0 +1,5 @@
+framework:
+    messenger:
+        transports:
+            # Messages run synchronously, in-process, during tests.
+            async: 'sync://'

@@ -1,3 +1,11 @@
 _security_logout:
     resource: security.route_loader.logout
     type: service
+
+# Controller-less route: it exists solely to make this path routable so the
+# json_login authenticator can intercept it (RouterListener runs at a higher
+# kernel.request priority than the firewall, so without a matching route it
+# 404s before the firewall ever gets a chance to run).
+api_login_check:
+    path: /api/login_check
+    methods: [POST]
