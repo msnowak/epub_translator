@@ -1,5 +1,4 @@
 services:
   backend:
     environment:
-      APP_ENV: dev
       XDEBUG_MODE: "off"
