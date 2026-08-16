@@ -60,7 +60,7 @@ final class TokenRefreshTest extends ApiTestCase
         $this->request('POST', '/api/token/refresh');
 
         $this->client->getCookieJar()->set(
-            new \Symfony\Component\BrowserKit\Cookie(RefreshTokenManager::COOKIE_NAME, $firstCookie, null, '/api', 'localhost'),
+            new \Symfony\Component\BrowserKit\Cookie(RefreshTokenManager::COOKIE_NAME, $firstCookie, null, '/api/token/refresh', 'localhost'),
         );
         $this->request('POST', '/api/token/refresh');
 

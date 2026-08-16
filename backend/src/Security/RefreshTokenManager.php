@@ -31,8 +31,10 @@ final readonly class RefreshTokenManager
 
         return Cookie::create(self::COOKIE_NAME, $plainToken)
             ->withExpires($expiresAt)
-            ->withPath('/api')
+            ->withPath('/api/token/refresh')
             ->withHttpOnly(true)
+            // Deliberate local-HTTP-only choice: the dev stack is plain HTTP.
+            // This must become true once the app is served behind TLS.
             ->withSecure(false)
             ->withSameSite(Cookie::SAMESITE_LAX);
     }
