@@ -5,22 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Api;
 
 use App\Repository\UserRepository;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use App\Tests\Support\ApiTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class RegistrationTest extends WebTestCase
+final class RegistrationTest extends ApiTestCase
 {
-    private KernelBrowser $client;
-
-    protected function setUp(): void
-    {
-        $this->client = self::createClient();
-    }
-
     public function testUserCanRegister(): void
     {
-        $this->post('/api/register', ['email' => 'reader@example.com', 'plainPassword' => 'haslo12345']);
+        $this->request('POST', '/api/register', ['email' => 'reader@example.com', 'plainPassword' => 'haslo12345']);
 
         self::assertResponseStatusCodeSame(201);
 
@@ -33,7 +25,7 @@ final class RegistrationTest extends WebTestCase
 
     public function testPasswordIsHashed(): void
     {
-        $this->post('/api/register', ['email' => 'reader@example.com', 'plainPassword' => 'haslo12345']);
+        $this->request('POST', '/api/register', ['email' => 'reader@example.com', 'plainPassword' => 'haslo12345']);
 
         $repository = self::getContainer()->get(UserRepository::class);
         $user = $repository->findOneByEmail('reader@example.com');
@@ -48,47 +40,23 @@ final class RegistrationTest extends WebTestCase
 
     public function testEmailMustBeUnique(): void
     {
-        $this->post('/api/register', ['email' => 'reader@example.com', 'plainPassword' => 'haslo12345']);
-        $this->post('/api/register', ['email' => 'reader@example.com', 'plainPassword' => 'inne12345']);
+        $this->request('POST', '/api/register', ['email' => 'reader@example.com', 'plainPassword' => 'haslo12345']);
+        $this->request('POST', '/api/register', ['email' => 'reader@example.com', 'plainPassword' => 'inne12345']);
 
         self::assertResponseStatusCodeSame(422);
     }
 
     public function testEmailMustBeValid(): void
     {
-        $this->post('/api/register', ['email' => 'nie-email', 'plainPassword' => 'haslo12345']);
+        $this->request('POST', '/api/register', ['email' => 'nie-email', 'plainPassword' => 'haslo12345']);
 
         self::assertResponseStatusCodeSame(422);
     }
 
     public function testPasswordMustBeAtLeastEightCharacters(): void
     {
-        $this->post('/api/register', ['email' => 'reader@example.com', 'plainPassword' => 'krotkie']);
+        $this->request('POST', '/api/register', ['email' => 'reader@example.com', 'plainPassword' => 'krotkie']);
 
         self::assertResponseStatusCodeSame(422);
-    }
-
-    /**
-     * @param array<string, mixed> $body
-     */
-    private function post(string $uri, array $body): void
-    {
-        $this->client->request('POST', $uri, server: [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_ACCEPT' => 'application/json',
-        ], content: json_encode($body, JSON_THROW_ON_ERROR));
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function payload(): array
-    {
-        $content = (string) $this->client->getResponse()->getContent();
-
-        /** @var array<string, mixed> $decoded */
-        $decoded = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-
-        return $decoded;
     }
 }
