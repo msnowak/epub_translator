@@ -9,7 +9,7 @@ framework:
                     max_retries: 3
                     delay: 5000
                     multiplier: 3
-            failed: 'doctrine://default?queue_name=failed'
+            failed: 'doctrine://default?queue_name=failed&auto_setup=0'
 
         routing:
             App\Message\AsyncMessageInterface: async
