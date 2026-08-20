@@ -74,6 +74,19 @@ final class ProjectCrudTest extends ApiTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
+    public function testStrangerCannotDeleteSomeoneElsesProject(): void
+    {
+        $owner = $this->createUser('owner@example.com');
+        $stranger = $this->createUser('stranger@example.com');
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $project = ProjectFactory::create($entityManager, $owner);
+
+        $this->request('DELETE', '/api/projects/'.$project->getId(), token: $this->authenticate($stranger));
+
+        self::assertResponseStatusCodeSame(404);
+        self::assertNotNull(self::getContainer()->get(ProjectRepository::class)->find($project->getId()));
+    }
+
     public function testDeleteRemovesProjectAndItsFiles(): void
     {
         $token = $this->authenticate($this->createUser());
