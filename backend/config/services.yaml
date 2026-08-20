@@ -41,3 +41,10 @@ when@test:
         ollama.http_client:
             class: Symfony\Component\HttpClient\MockHttpClient
             public: true
+
+        # The first production consumer arrives with ParseEpubHandler; without this
+        # the container would remove the service and the test container could not
+        # reach it either. The entry stays: the writer test uses it directly.
+        App\Epub\ProjectStructureWriter:
+            autowire: true
+            public: true
