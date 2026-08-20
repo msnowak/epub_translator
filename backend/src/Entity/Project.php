@@ -11,9 +11,14 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Repository\ProjectRepository;
+use App\State\CancelProjectProcessor;
 use App\State\CreateProjectProcessor;
 use App\State\DeleteProjectProcessor;
+use App\State\PauseProjectProcessor;
 use App\State\ProjectCollectionProvider;
+use App\State\ResumeProjectProcessor;
+use App\State\RetryFailedSegmentsProcessor;
+use App\State\StartProjectProcessor;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
@@ -41,6 +46,50 @@ use Symfony\Component\Validator\Constraints as Assert;
             inputFormats: ['multipart' => ['multipart/form-data']],
             deserialize: false,
             processor: CreateProjectProcessor::class,
+        ),
+        // read: true wczytuje encje, bez ktorej "object" w wyrazeniu security
+        // byloby puste, a procesor nie dostalby projektu. Te operacje nie maja
+        // ciala, stad deserialize: false.
+        //
+        // ReadProvider celowo nie rzuca 404, gdy provider nic nie znajdzie dla
+        // metody POST - POST zwykle tworzy zasob. OwnerExtension odfiltrowuje
+        // cudzy projekt, wiec "object" bywa tu null i bez pierwszego czlonu
+        // wyrazenia voter odmawialby dostepu kodem 403. O braku zasobu
+        // decyduje procesor, ktory odpowiada 404 tak samo jak GET i PATCH.
+        new Post(
+            uriTemplate: '/projects/{id}/start',
+            security: 'object === null or is_granted("PROJECT_EDIT", object)',
+            read: true,
+            deserialize: false,
+            processor: StartProjectProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/projects/{id}/pause',
+            security: 'object === null or is_granted("PROJECT_EDIT", object)',
+            read: true,
+            deserialize: false,
+            processor: PauseProjectProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/projects/{id}/resume',
+            security: 'object === null or is_granted("PROJECT_EDIT", object)',
+            read: true,
+            deserialize: false,
+            processor: ResumeProjectProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/projects/{id}/cancel',
+            security: 'object === null or is_granted("PROJECT_EDIT", object)',
+            read: true,
+            deserialize: false,
+            processor: CancelProjectProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/projects/{id}/retry-failed',
+            security: 'object === null or is_granted("PROJECT_EDIT", object)',
+            read: true,
+            deserialize: false,
+            processor: RetryFailedSegmentsProcessor::class,
         ),
     ],
     normalizationContext: ['groups' => ['project:read']],
