@@ -44,6 +44,13 @@ when@test:
             class: Symfony\Component\HttpClient\MockHttpClient
             public: true
 
+        # Overrides the alias to OllamaClient, so no test can reach the network
+        # by accident. Public, so a test can swap in its own scripted instance
+        # the same way it swaps ollama.http_client.
+        App\Translation\TranslationEngineInterface:
+            class: App\Tests\Support\FakeTranslationEngine
+            public: true
+
         # The first production consumer arrives with ParseEpubHandler; without this
         # the container would remove the service and the test container could not
         # reach it either. The entry stays: the writer test uses it directly.
