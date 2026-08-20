@@ -26,7 +26,11 @@ final class ProjectUploadTest extends ApiTestCase
 
         $payload = $this->payload();
         self::assertSame('Moja książka', $payload['title']);
-        self::assertSame('parsing', $payload['status']);
+        // Na produkcji odpowiedz niesie status "parsing", bo rozdzialy powstaja
+        // w workerze. W testach transport async to sync://, wiec parsowanie
+        // konczy sie zanim odpowiedz zostanie zserializowana. Statusy pilnuje
+        // ProjectParsingTest; tutaj chodzi o to, ze pole w ogole wyjezdza.
+        self::assertSame('ready', $payload['status']);
         self::assertArrayNotHasKey('storagePath', $payload);
 
         $project = self::getContainer()->get(ProjectRepository::class)->find($payload['id']);
