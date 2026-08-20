@@ -68,3 +68,18 @@ docker compose exec backend php bin/console app:ollama:ping
 This reports the configured address, lists available models on success, and
 prints a numbered checklist (server running? external interface? firewall?
 correct `OLLAMA_BASE_URL`?) on failure.
+
+**Checking how the model handles a paragraph.** Translation quality and, more
+importantly, whether the model preserves the formatting tokens that carry the
+EPUB's inline markup, can be probed without the UI:
+
+```bash
+docker compose exec backend php bin/console app:translate:try "This is a [1]very important[/1] paragraph." --target=pl
+```
+
+It prints the assembled prompt, the raw answer and the validator's verdict.
+Add `--source`, `--model` or `--prompt` to vary the request, or `--project` to
+borrow the settings of an existing project. A model that keeps dropping tokens
+is a model to replace, not a bug to fix: a paragraph whose tokens are gone can
+no longer be written back into the book, so the translator retries it
+`MAX_TRANSLATION_ATTEMPTS` times and then marks that one paragraph failed.

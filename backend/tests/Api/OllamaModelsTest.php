@@ -45,6 +45,9 @@ final class OllamaModelsTest extends ApiTestCase
         $this->request('GET', '/api/ollama/models', token: $token);
 
         self::assertResponseStatusCodeSame(503);
-        self::assertArrayHasKey('message', $this->payload());
+        self::assertSame(
+            'Nie udało się połączyć z serwerem Ollama. Sprawdź konfigurację połączenia.',
+            $this->payload()['detail'],
+        );
     }
 }

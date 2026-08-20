@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Http\ProblemResponse;
 use App\Ollama\OllamaClient;
 use App\Ollama\OllamaUnavailableException;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,9 +20,9 @@ final class OllamaModelsController
             return new JsonResponse(['models' => $client->listModels()]);
         } catch (OllamaUnavailableException) {
             // This message is rendered in the project wizard, hence Polish.
-            return new JsonResponse(
-                ['message' => 'Nie udało się połączyć z serwerem Ollama. Sprawdź konfigurację połączenia.'],
+            return ProblemResponse::create(
                 Response::HTTP_SERVICE_UNAVAILABLE,
+                'Nie udało się połączyć z serwerem Ollama. Sprawdź konfigurację połączenia.',
             );
         }
     }

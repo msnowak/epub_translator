@@ -33,6 +33,8 @@ services:
         arguments:
             $httpClient: '@ollama.http_client'
 
+    App\Translation\TranslationEngineInterface: '@App\Ollama\OllamaClient'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
@@ -40,6 +42,13 @@ when@test:
     services:
         ollama.http_client:
             class: Symfony\Component\HttpClient\MockHttpClient
+            public: true
+
+        # Overrides the alias to OllamaClient, so no test can reach the network
+        # by accident. Public, so a test can swap in its own scripted instance
+        # the same way it swaps ollama.http_client.
+        App\Translation\TranslationEngineInterface:
+            class: App\Tests\Support\FakeTranslationEngine
             public: true
 
         # The first production consumer arrives with ParseEpubHandler; without this
