@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Ollama;
 
-final class OllamaUnavailableException extends \RuntimeException
+use App\Translation\TranslationEngineException;
+
+final class OllamaUnavailableException extends TranslationEngineException
 {
 }

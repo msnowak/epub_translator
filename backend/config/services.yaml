@@ -33,6 +33,8 @@ services:
         arguments:
             $httpClient: '@ollama.http_client'
 
+    App\Translation\TranslationEngineInterface: '@App\Ollama\OllamaClient'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 

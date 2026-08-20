@@ -20,7 +20,7 @@ final class OllamaPingCommandTest extends TestCase
             'response_headers' => ['content-type' => 'application/json'],
         ]));
 
-        $tester = new CommandTester(new OllamaPingCommand(new OllamaClient($http), 'http://host.docker.internal:11434'));
+        $tester = new CommandTester(new OllamaPingCommand(new OllamaClient($http, 0.2), 'http://host.docker.internal:11434'));
         $exitCode = $tester->execute([]);
 
         self::assertSame(0, $exitCode);
@@ -34,7 +34,7 @@ final class OllamaPingCommandTest extends TestCase
             throw new TransportException('Connection refused');
         });
 
-        $tester = new CommandTester(new OllamaPingCommand(new OllamaClient($http), 'http://host.docker.internal:11434'));
+        $tester = new CommandTester(new OllamaPingCommand(new OllamaClient($http, 0.2), 'http://host.docker.internal:11434'));
         $exitCode = $tester->execute([]);
 
         self::assertSame(1, $exitCode);
