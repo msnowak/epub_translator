@@ -38,10 +38,15 @@ abstract class ApiTestCase extends WebTestCase
     /**
      * @param array<string, mixed>|null $body
      */
-    protected function request(string $method, string $uri, ?array $body = null, ?string $token = null): void
-    {
+    protected function request(
+        string $method,
+        string $uri,
+        ?array $body = null,
+        ?string $token = null,
+        ?string $contentType = null,
+    ): void {
         $server = [
-            'CONTENT_TYPE' => 'application/json',
+            'CONTENT_TYPE' => $contentType ?? 'application/json',
             'HTTP_ACCEPT' => 'application/json',
         ];
 

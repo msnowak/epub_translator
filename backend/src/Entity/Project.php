@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Repository\ProjectRepository;
 use App\State\CreateProjectProcessor;
+use App\State\DeleteProjectProcessor;
+use App\State\ProjectCollectionProvider;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
@@ -20,8 +24,17 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Index(fields: ['owner'], name: 'idx_project_owner')]
 #[ApiResource(
     operations: [
-        new GetCollection(uriTemplate: '/projects'),
+        new GetCollection(uriTemplate: '/projects', provider: ProjectCollectionProvider::class),
         new Get(uriTemplate: '/projects/{id}'),
+        new Patch(
+            uriTemplate: '/projects/{id}',
+            security: 'is_granted("PROJECT_EDIT", object)',
+        ),
+        new Delete(
+            uriTemplate: '/projects/{id}',
+            security: 'is_granted("PROJECT_DELETE", object)',
+            processor: DeleteProjectProcessor::class,
+        ),
         new Post(
             uriTemplate: '/projects',
             status: 201,
@@ -89,6 +102,18 @@ class Project
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     #[Groups(['project:read'])]
     private \DateTimeImmutable $updatedAt;
+
+    /**
+     * Liczniki postepu nie maja kolumn - wypelnia je provider przy odczycie,
+     * wiec nie moga rozjechac sie z tabela segmentow.
+     *
+     * @var array<string, int>
+     */
+    #[Groups(['project:read'])]
+    private array $segmentCounts = [];
+
+    #[Groups(['project:read'])]
+    private int $totalSegments = 0;
 
     public function __construct(
         User $owner,
@@ -220,5 +245,27 @@ class Project
     public function touch(): void
     {
         $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function getSegmentCounts(): array
+    {
+        return $this->segmentCounts;
+    }
+
+    /**
+     * @param array<string, int> $segmentCounts
+     */
+    public function setSegmentCounts(array $segmentCounts): void
+    {
+        $this->segmentCounts = $segmentCounts;
+        $this->totalSegments = array_sum($segmentCounts);
+    }
+
+    public function getTotalSegments(): int
+    {
+        return $this->totalSegments;
     }
 }
