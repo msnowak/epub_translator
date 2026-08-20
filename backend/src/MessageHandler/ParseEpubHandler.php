@@ -38,9 +38,12 @@ final readonly class ParseEpubHandler
             $this->writer->write($project, $this->storage->path($project));
             $project->setStatus(ProjectStatus::Ready);
             $project->setErrorMessage(null);
-        } catch (InvalidEpubException $exception) {
+        } catch (InvalidEpubException) {
             $project->setStatus(ProjectStatus::Failed);
-            $project->setErrorMessage($exception->getMessage());
+            // Trafia do interfejsu, wiec po polsku. Techniczny powod z wyjatku
+            // nie niesie uzytkownikowi zadnej uzytecznej informacji - plik i tak
+            // trzeba wgrac jeszcze raz.
+            $project->setErrorMessage('Nie udało się odczytać struktury pliku EPUB. Sprawdź, czy plik nie jest uszkodzony.');
         }
 
         $project->touch();

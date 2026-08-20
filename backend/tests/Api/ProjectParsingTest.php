@@ -47,7 +47,10 @@ final class ProjectParsingTest extends ApiTestCase
         $project = self::getContainer()->get(ProjectRepository::class)->find($this->payload()['id']);
         self::assertNotNull($project);
         self::assertSame('failed', $project->getStatus()->value);
-        self::assertNotNull($project->getErrorMessage());
+        self::assertSame(
+            'Nie udało się odczytać struktury pliku EPUB. Sprawdź, czy plik nie jest uszkodzony.',
+            $project->getErrorMessage(),
+        );
     }
 
     private function upload(string $token, string $path): void
