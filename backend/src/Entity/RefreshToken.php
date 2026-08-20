@@ -10,7 +10,6 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: RefreshTokenRepository::class)]
-#[ORM\Index(fields: ['tokenHash'], name: 'idx_refresh_token_hash')]
 class RefreshToken
 {
     #[ORM\Id]
