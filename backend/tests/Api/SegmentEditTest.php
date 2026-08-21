@@ -67,6 +67,32 @@ final class SegmentEditTest extends ApiTestCase
         self::assertArrayHasKey('detail', $this->payload());
     }
 
+    public function testRejectedCorrectionDoesNotPersist(): void
+    {
+        $owner = $this->createUser();
+        $segment = $this->segment($owner, 'This is [1]important[/1].', ['1' => '<em>']);
+
+        $this->request(
+            'PATCH',
+            '/api/segments/'.$segment->getId(),
+            ['translatedText' => 'To jest ważne.'],
+            $this->authenticate($owner),
+            'application/merge-patch+json',
+        );
+
+        self::assertResponseStatusCodeSame(422);
+
+        // Odswiezenie z bazy jest kluczowe: API Platform denormalizuje cialo
+        // zadania na zarzadzana encje jeszcze przed procesorem, wiec obiekt w
+        // pamieci jest juz "brudny". Bez refresh() sprawdzalibysmy ten sam
+        // brudny stan, a nie to, co faktycznie trafilo do wiersza w bazie.
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->refresh($segment);
+
+        self::assertSame('Wstępne tłumaczenie.', $segment->getTranslatedText());
+        self::assertSame(SegmentStatus::Translated, $segment->getStatus());
+    }
+
     public function testCorrectionInventingATokenIsRejected(): void
     {
         $owner = $this->createUser();
