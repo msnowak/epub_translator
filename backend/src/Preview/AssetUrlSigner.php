@@ -53,6 +53,13 @@ final readonly class AssetUrlSigner
 
     private function digest(string $projectId, string $path, int $expiresAt): string
     {
-        return hash_hmac('sha256', \sprintf('%s|%s|%d', $projectId, $path, $expiresAt), $this->secret);
+        // Length-prefix every field instead of joining with a plain delimiter:
+        // a bare '|' can't tell "A|B" + "C" apart from "A" + "B|C", so two
+        // different (project, path) pairs could otherwise hash identically.
+        $payload = \strlen($projectId).':'.$projectId
+            .\strlen($path).':'.$path
+            .$expiresAt;
+
+        return hash_hmac('sha256', $payload, $this->secret);
     }
 }

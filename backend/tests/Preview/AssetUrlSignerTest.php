@@ -70,4 +70,27 @@ final class AssetUrlSignerTest extends TestCase
 
         self::assertGreaterThan(time() + 3500, (int) $expiresAt);
     }
+
+    public function testRejectsATokenWithATamperedExpiry(): void
+    {
+        $signer = new AssetUrlSigner('sekret');
+        $token = $signer->sign(self::PROJECT, 'OEBPS/images/cover.png');
+
+        [, $digest] = explode('.', $token, 2);
+        $tamperedToken = (time() + 999_999).'.'.$digest;
+
+        self::assertFalse($signer->isValid(self::PROJECT, 'OEBPS/images/cover.png', $tamperedToken));
+    }
+
+    public function testRejectsATokenMintedForADifferentPairThatWouldCollideUnderNaiveConcatenation(): void
+    {
+        $signer = new AssetUrlSigner('sekret');
+
+        // Naively joined with '|', both pairs render as the same string:
+        // "project|evil|path|<expiresAt>". A length-prefixed payload must
+        // keep them distinct.
+        $token = $signer->sign('project|evil', 'path');
+
+        self::assertFalse($signer->isValid('project', 'evil|path', $token));
+    }
 }
