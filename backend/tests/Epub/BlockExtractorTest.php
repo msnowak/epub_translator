@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Epub;
 
 use App\Epub\BlockExtractor;
+use App\Epub\XhtmlDocument;
 use PHPUnit\Framework\TestCase;
 
 final class BlockExtractorTest extends TestCase
 {
     public function testExtractsParagraphsInDocumentOrder(): void
     {
-        $blocks = (new BlockExtractor())->extract($this->document('<p>One</p><p>Two</p>'));
+        $blocks = (new BlockExtractor(new XhtmlDocument()))->extract($this->document('<p>One</p><p>Two</p>'));
 
         self::assertCount(2, $blocks);
         self::assertSame(0, $blocks[0]->nodeIndex);
@@ -22,7 +23,7 @@ final class BlockExtractorTest extends TestCase
 
     public function testTakesDeepestBlockWhenBlocksAreNested(): void
     {
-        $blocks = (new BlockExtractor())->extract($this->document('<li><p>Inner</p></li>'));
+        $blocks = (new BlockExtractor(new XhtmlDocument()))->extract($this->document('<li><p>Inner</p></li>'));
 
         self::assertCount(1, $blocks);
         self::assertSame('Inner', $blocks[0]->innerHtml);
@@ -30,7 +31,7 @@ final class BlockExtractorTest extends TestCase
 
     public function testKeepsInlineMarkupInsideABlock(): void
     {
-        $blocks = (new BlockExtractor())->extract($this->document('<p>To jest <em>ważne</em></p>'));
+        $blocks = (new BlockExtractor(new XhtmlDocument()))->extract($this->document('<p>To jest <em>ważne</em></p>'));
 
         self::assertCount(1, $blocks);
         self::assertSame('To jest <em>ważne</em>', $blocks[0]->innerHtml);
@@ -38,7 +39,7 @@ final class BlockExtractorTest extends TestCase
 
     public function testSkipsBlocksWithoutText(): void
     {
-        $blocks = (new BlockExtractor())->extract($this->document('<p><img src="a.png"/></p><p>Text</p>'));
+        $blocks = (new BlockExtractor(new XhtmlDocument()))->extract($this->document('<p><img src="a.png"/></p><p>Text</p>'));
 
         self::assertCount(1, $blocks);
         self::assertSame('Text', $blocks[0]->innerHtml);
@@ -46,7 +47,7 @@ final class BlockExtractorTest extends TestCase
 
     public function testCoversHeadingsListsAndTableCells(): void
     {
-        $blocks = (new BlockExtractor())->extract($this->document(
+        $blocks = (new BlockExtractor(new XhtmlDocument()))->extract($this->document(
             '<h1>Title</h1><ul><li>Item</li></ul><table><tr><td>Cell</td></tr></table>',
         ));
 
