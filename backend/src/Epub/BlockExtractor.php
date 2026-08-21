@@ -37,9 +37,9 @@ final readonly class BlockExtractor
     }
 
     /**
-     * Blocks in the same order extract() uses to assign nodeIndex. One place
-     * decides what counts as a block - otherwise writing a translation back
-     * would land in a different node than the one it was read from.
+     * Bloki w tej samej kolejnosci, w ktorej extract() nadaje nodeIndex.
+     * Jedno miejsce decyduje o tym, co jest blokiem - inaczej zapis tlumaczen
+     * trafialby w inne wezly niz odczyt.
      *
      * @return list<\DOMElement>
      */

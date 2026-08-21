@@ -82,9 +82,9 @@ final readonly class XhtmlDocument
     }
 
     /**
-     * The fragment is parsed inside a wrapper that inherits the target
-     * element's namespace. Without it, an <em> from detokenize() would land
-     * outside the XHTML namespace and serialise as an empty-namespace <em>.
+     * Fragment jedzie do parsera w opakowaniu dziedziczacym przestrzen nazw
+     * elementu docelowego. Bez tego <em> z detokenize() wyladowaloby poza
+     * przestrzenia XHTML i zserializowalo sie jako <em xmlns="">.
      *
      * @return list<\DOMNode>
      */
@@ -105,8 +105,8 @@ final readonly class XhtmlDocument
         }
 
         if (!$parsed || null === $fragment->documentElement) {
-            // An unclosed tag from a manual edit or from the model. The text
-            // matters more than the formatting - the chapter must still open.
+            // Niedomkniety znacznik z recznej poprawki albo od modelu. Tekst
+            // jest wazniejszy niz formatowanie - rozdzial ma sie otworzyc.
             return [$document->createTextNode(strip_tags($html))];
         }
 
