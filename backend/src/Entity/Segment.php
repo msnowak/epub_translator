@@ -8,7 +8,9 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Repository\SegmentRepository;
+use App\State\RetranslateSegmentProcessor;
 use App\State\SegmentCollectionProvider;
 use App\State\UpdateSegmentProcessor;
 use Doctrine\DBAL\Types\Types;
@@ -33,6 +35,13 @@ use Symfony\Component\Uid\Uuid;
         new Patch(
             uriTemplate: '/segments/{id}',
             processor: UpdateSegmentProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/segments/{id}/retranslate',
+            security: 'object === null or is_granted("PROJECT_EDIT", object.getProject())',
+            read: true,
+            deserialize: false,
+            processor: RetranslateSegmentProcessor::class,
         ),
     ],
     normalizationContext: ['groups' => ['segment:read']],
