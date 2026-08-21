@@ -7,8 +7,10 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
+use ApiPlatform\Metadata\Patch;
 use App\Repository\SegmentRepository;
 use App\State\SegmentCollectionProvider;
+use App\State\UpdateSegmentProcessor;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
@@ -28,8 +30,13 @@ use Symfony\Component\Uid\Uuid;
             paginationItemsPerPage: 100,
             provider: SegmentCollectionProvider::class,
         ),
+        new Patch(
+            uriTemplate: '/segments/{id}',
+            processor: UpdateSegmentProcessor::class,
+        ),
     ],
     normalizationContext: ['groups' => ['segment:read']],
+    denormalizationContext: ['groups' => ['segment:write']],
 )]
 class Segment
 {
@@ -71,7 +78,7 @@ class Segment
     private array $placeholders;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    #[Groups(['segment:read'])]
+    #[Groups(['segment:read', 'segment:write'])]
     private ?string $translatedText = null;
 
     #[ORM\Column(enumType: SegmentStatus::class)]
