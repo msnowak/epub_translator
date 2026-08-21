@@ -83,6 +83,16 @@ final class SegmentReadTest extends ApiTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
+    public function testListingRequiresAuthentication(): void
+    {
+        $owner = $this->createUser();
+        $chapter = $this->chapterWithSegments($owner, 1);
+
+        $this->request('GET', '/api/chapters/'.$chapter->getId().'/segments');
+
+        self::assertResponseStatusCodeSame(401);
+    }
+
     private function chapterWithSegments(User $owner, int $count): Chapter
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);

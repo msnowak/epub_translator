@@ -54,9 +54,10 @@ final readonly class ChapterCollectionProvider implements ProviderInterface
         }
 
         $chapters = $this->chapters->findForProjectInSpineOrder($project);
+        $counts = $this->chapters->countByStatusForProject($project);
 
         foreach ($chapters as $chapter) {
-            $chapter->setSegmentCounts($this->chapters->countByStatusForChapter($chapter));
+            $chapter->setSegmentCounts($counts[(string) $chapter->getId()] ?? []);
         }
 
         return $chapters;
