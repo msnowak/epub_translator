@@ -4,18 +4,38 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Link;
 use App\Repository\SegmentRepository;
+use App\State\SegmentCollectionProvider;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: SegmentRepository::class)]
 #[ORM\Index(fields: ['project', 'status'], name: 'idx_segment_project_status')]
 #[ORM\UniqueConstraint(name: 'uniq_segment_node', columns: ['chapter_id', 'node_index', 'sub_index'])]
+#[ApiResource(
+    operations: [
+        new GetCollection(
+            uriTemplate: '/chapters/{chapterId}/segments',
+            uriVariables: [
+                'chapterId' => new Link(fromClass: Chapter::class, toProperty: 'chapter'),
+            ],
+            order: ['position' => 'ASC'],
+            paginationItemsPerPage: 100,
+            provider: SegmentCollectionProvider::class,
+        ),
+    ],
+    normalizationContext: ['groups' => ['segment:read']],
+)]
 class Segment
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
+    #[Groups(['segment:read'])]
     private Uuid $id;
 
     /**
@@ -31,15 +51,19 @@ class Segment
     private Chapter $chapter;
 
     #[ORM\Column]
+    #[Groups(['segment:read'])]
     private int $position;
 
     #[ORM\Column]
+    #[Groups(['segment:read'])]
     private int $nodeIndex;
 
     #[ORM\Column]
+    #[Groups(['segment:read'])]
     private int $subIndex;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Groups(['segment:read'])]
     private string $sourceText;
 
     /** @var array<array-key, string> */
@@ -47,15 +71,18 @@ class Segment
     private array $placeholders;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['segment:read'])]
     private ?string $translatedText = null;
 
     #[ORM\Column(enumType: SegmentStatus::class)]
+    #[Groups(['segment:read'])]
     private SegmentStatus $status = SegmentStatus::Pending;
 
     #[ORM\Column]
     private int $attempts = 0;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['segment:read'])]
     private ?string $errorMessage = null;
 
     /**

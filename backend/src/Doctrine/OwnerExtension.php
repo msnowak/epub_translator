@@ -8,7 +8,9 @@ use ApiPlatform\Doctrine\Orm\Extension\QueryCollectionExtensionInterface;
 use ApiPlatform\Doctrine\Orm\Extension\QueryItemExtensionInterface;
 use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
 use ApiPlatform\Metadata\Operation;
+use App\Entity\Chapter;
 use App\Entity\Project;
+use App\Entity\Segment;
 use App\Entity\User;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -60,11 +62,20 @@ final readonly class OwnerExtension implements QueryCollectionExtensionInterface
      */
     private function restrict(QueryBuilder $queryBuilder, string $resourceClass): void
     {
-        if (Project::class !== $resourceClass) {
+        // Rozdzialy i segmenty maja wlasne identyfikatory, wiec bez tego filtru
+        // cudzy rozdzial bylby dostepny po samym id, z pominieciem projektu.
+        $ownerPath = match ($resourceClass) {
+            Project::class => 'owner',
+            Chapter::class, Segment::class => 'project.owner',
+            default => null,
+        };
+
+        if (null === $ownerPath) {
             return;
         }
 
         $user = $this->security->getUser();
+        $alias = $queryBuilder->getRootAliases()[0];
 
         if (!$user instanceof User) {
             // Firewall nie powinien tu dopuscic, ale gdyby kiedys dopuscil,
@@ -74,9 +85,17 @@ final readonly class OwnerExtension implements QueryCollectionExtensionInterface
             return;
         }
 
-        $alias = $queryBuilder->getRootAliases()[0];
+        if ('owner' === $ownerPath) {
+            $queryBuilder
+                ->andWhere(\sprintf('%s.owner = :owner', $alias))
+                ->setParameter('owner', $user);
+
+            return;
+        }
+
         $queryBuilder
-            ->andWhere(\sprintf('%s.owner = :owner', $alias))
+            ->join(\sprintf('%s.project', $alias), 'owner_project')
+            ->andWhere('owner_project.owner = :owner')
             ->setParameter('owner', $user);
     }
 }
