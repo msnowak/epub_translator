@@ -90,6 +90,35 @@ final class OpfMetadataWriterTest extends TestCase
         self::assertStringContainsString('Tom &amp; Jerry &lt;b&gt;', $updated);
     }
 
+    public function testEscapesTheTitleWhenCreatingItFromScratch(): void
+    {
+        $updated = $this->writer()->update(
+            $this->package('<dc:language>en</dc:language>'),
+            'pl',
+            'Tom & Jerry <b>',
+        );
+
+        // Nowo tworzony element idzie inna sciezka niz nadpisywany - regresja
+        // moglaby po cichu wrocic do trzeciego argumentu createElementNS,
+        // ktory nie escape'uje ampersanda.
+        self::assertStringContainsString('Tom &amp; Jerry &lt;b&gt;', $updated);
+    }
+
+    public function testAddsTheTitleWhenTheBookDeclaresNone(): void
+    {
+        $updated = $this->writer()->update(
+            $this->package('<dc:language>en</dc:language>'),
+            'pl',
+            'Wichrowe Wzgórza',
+        );
+
+        self::assertStringContainsString('<dc:title>Wichrowe Wzgórza</dc:title>', $updated);
+        // Jezyk byl juz obecny - ma zostac nadpisany, a nie zdublowany obok
+        // nowo dolozonego tytulu.
+        self::assertSame(1, substr_count($updated, '<dc:language'));
+        self::assertStringContainsString('<dc:language>pl</dc:language>', $updated);
+    }
+
     public function testRejectsAPackageWithoutMetadata(): void
     {
         $this->expectException(InvalidEpubException::class);
