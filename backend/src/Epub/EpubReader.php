@@ -32,6 +32,7 @@ final readonly class EpubReader
 
             return new EpubPackage(
                 $zip,
+                $opfPath,
                 $spine,
                 array_values($manifest),
                 $this->metadataValue($opf, 'title'),

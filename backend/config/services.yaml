@@ -57,3 +57,10 @@ when@test:
         App\Epub\ProjectStructureWriter:
             autowire: true
             public: true
+
+        # Konsument produkcyjny dochodzi razem z ProjectDownloadController
+        # (Task 7); do tego czasu kontener usunalby usluge, a test nie mialby
+        # jak po nia siegnac. Wpis znika w Tasku 7.
+        App\Export\TranslatedEpubBuilder:
+            autowire: true
+            public: true

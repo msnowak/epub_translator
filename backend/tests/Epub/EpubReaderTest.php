@@ -100,6 +100,19 @@ final class EpubReaderTest extends TestCase
         $package->close();
     }
 
+    public function testExposesThePathToThePackageDocument(): void
+    {
+        $path = EpubBuilder::create()->withChapter('ch1.xhtml', '<p>Hello</p>')->build();
+
+        $package = (new EpubReader())->open($path);
+
+        // Pakiet nie jest wymieniony we wlasnym manifescie, wiec eksport nie
+        // ma jak go znalezc inaczej niz od czytnika.
+        self::assertSame('OEBPS/content.opf', $package->opfHref());
+
+        $package->close();
+    }
+
     public function testRejectsArchiveWithoutContainerXml(): void
     {
         $path = EpubBuilder::create()
