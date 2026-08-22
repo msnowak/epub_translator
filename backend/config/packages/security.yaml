@@ -42,6 +42,10 @@ security:
         - { path: ^/api/token/refresh$, roles: PUBLIC_ACCESS }
         - { path: ^/api/docs(\.[a-z]+)?$, roles: PUBLIC_ACCESS }
         - { path: ^/api$, roles: PUBLIC_ACCESS }
+        # Zadania o obrazy wysyla sama przegladarka z iframe'a podgladu,
+        # wiec nie moga niesc naglowka Authorization - chroni je podpis
+        # w URL-u (App\Preview\AssetUrlSigner).
+        - { path: ^/api/projects/[^/]+/assets/, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:
