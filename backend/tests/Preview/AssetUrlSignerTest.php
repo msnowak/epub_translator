@@ -53,10 +53,11 @@ final class AssetUrlSignerTest extends TestCase
 
     public function testRejectsAnExpiredSignature(): void
     {
-        $signer = new AssetUrlSigner('sekret', ttlSeconds: 3600);
-        $expiredAt = time() - 10;
-        $payload = self::PROJECT.'|OEBPS/images/cover.png|'.$expiredAt;
-        $token = $expiredAt.'.'.hash_hmac('sha256', $payload, 'sekret');
+        // Podpis wystawia sam signer, wiec skrot jest prawdziwy i odrzucic
+        // token moze wylacznie zegar - recznie sklejony digest przechodzilby
+        // ten test takze bez sprawdzania waznosci.
+        $signer = new AssetUrlSigner('sekret', ttlSeconds: -10);
+        $token = $signer->sign(self::PROJECT, 'OEBPS/images/cover.png');
 
         self::assertFalse($signer->isValid(self::PROJECT, 'OEBPS/images/cover.png', $token));
     }

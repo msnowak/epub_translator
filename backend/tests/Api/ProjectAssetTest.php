@@ -27,6 +27,40 @@ final class ProjectAssetTest extends ApiTestCase
         self::assertResponseHeaderSame('Content-Type', 'image/png');
     }
 
+    public function testHardensEveryAssetResponse(): void
+    {
+        $owner = $this->createUser();
+        $project = $this->projectWithFile($owner);
+
+        $this->client->request('GET', $this->signedUrl($project, 'OEBPS/images/cover.png'));
+
+        // Bajty pochodza wprost z ksiazki i nie przechodza przez odkazanie
+        // podgladu, wiec przegladarka nie moze zgadywac ich typu ani pozwolic
+        // im na cokolwiek na naszej domenie.
+        self::assertResponseHeaderSame('X-Content-Type-Options', 'nosniff');
+        self::assertResponseHeaderSame('Content-Security-Policy', "default-src 'none'; sandbox");
+
+        $this->client->request('GET', '/api/projects/'.$project->getId().'/assets/OEBPS/images/cover.png');
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertResponseHeaderSame('X-Content-Type-Options', 'nosniff');
+        self::assertResponseHeaderSame('Content-Security-Policy', "default-src 'none'; sandbox");
+    }
+
+    public function testServesChapterDocumentsAsPlainText(): void
+    {
+        $owner = $this->createUser();
+        $project = $this->projectWithFile($owner);
+
+        $this->client->request('GET', $this->signedUrl($project, 'OEBPS/ch1.xhtml'));
+
+        self::assertResponseIsSuccessful();
+
+        // Rozdzial jest w manifescie, wiec da sie o niego poprosic - ale jako
+        // dokument wykonalby swoje skrypty na naszej domenie.
+        self::assertResponseHeaderSame('Content-Type', 'text/plain; charset=utf-8');
+    }
+
     public function testRefusesAnUnsignedRequest(): void
     {
         $owner = $this->createUser();

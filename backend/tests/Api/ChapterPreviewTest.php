@@ -52,6 +52,56 @@ final class ChapterPreviewTest extends ApiTestCase
         self::assertStringContainsString('/api/projects/'.$project->getId().'/assets/OEBPS/images/cover.png?t=', $html);
     }
 
+    public function testMintedUrlForAnAssetWithASpaceIsFetchable(): void
+    {
+        $owner = $this->createUser();
+        [$project, $chapter] = $this->projectWithEncodedAssetHref($owner);
+
+        $this->request(
+            'GET',
+            '/api/projects/'.$project->getId().'/preview/'.$chapter->getId(),
+            token: $this->authenticate($owner),
+        );
+
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getResponse()->getContent();
+
+        self::assertSame(1, preg_match('#"(/api/projects/[^"]+/assets/[^"]+)"#', $html, $matches));
+
+        // Ksiazka zapisuje spacje procentowo, a router dekoduje sciezke przed
+        // dopasowaniem trasy - podpis musi trafic w postac zdekodowana,
+        // inaczej wlasny adres podgladu dostaje 403.
+        $this->client->request('GET', $matches[1] ?? '');
+
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('Content-Type', 'image/png');
+    }
+
+    public function testMarkupOnlyTranslationDoesNotShiftTheFollowingSegmentId(): void
+    {
+        $owner = $this->createUser();
+        [$project, $chapter, $second] = $this->projectWithMarkupOnlyTranslation($owner);
+
+        $this->request(
+            'GET',
+            '/api/projects/'.$project->getId().'/preview/'.$chapter->getId(),
+            token: $this->authenticate($owner),
+        );
+
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getResponse()->getContent();
+
+        // Pierwszy akapit po zlozeniu nie ma juz tekstu. Gdyby podglad liczyl
+        // bloki drugi raz, "seg-two" wyladowaloby na nim, a edytor pisalby
+        // poprawki do zlego wiersza.
+        self::assertMatchesRegularExpression(
+            '/<p data-segment-id="'.preg_quote((string) $second->getId(), '/').'">Drugie\./',
+            $html,
+        );
+    }
+
     public function testUntranslatedParagraphsFallBackToTheOriginal(): void
     {
         $owner = $this->createUser();
@@ -165,6 +215,69 @@ final class ChapterPreviewTest extends ApiTestCase
         $entityManager->flush();
 
         return [$project, $chapter];
+    }
+
+    /**
+     * @return array{Project, Chapter}
+     */
+    private function projectWithEncodedAssetHref(User $owner): array
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $project = ProjectFactory::create($entityManager, $owner);
+
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        );
+
+        $epubPath = EpubBuilder::create()
+            ->withChapter('ch1.xhtml', '<p><img src="images/my%20image.png"/></p><p>A paragraph.</p>')
+            ->withImage('images/my image.png', $png)
+            ->build();
+
+        $storage = self::getContainer()->get(ProjectStorage::class);
+        $project->setStoragePath($storage->store(new \SplFileInfo($epubPath), $project));
+
+        $chapter = new Chapter($project, 0, 'OEBPS/ch1.xhtml');
+        $entityManager->persist($chapter);
+        $entityManager->flush();
+
+        return [$project, $chapter];
+    }
+
+    /**
+     * @return array{Project, Chapter, Segment}
+     */
+    private function projectWithMarkupOnlyTranslation(User $owner): array
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $project = ProjectFactory::create($entityManager, $owner);
+
+        $epubPath = EpubBuilder::create()
+            ->withChapter('ch1.xhtml', '<p><em>Foo</em></p><p>Second.</p>')
+            ->build();
+
+        $storage = self::getContainer()->get(ProjectStorage::class);
+        $project->setStoragePath($storage->store(new \SplFileInfo($epubPath), $project));
+
+        $chapter = new Chapter($project, 0, 'OEBPS/ch1.xhtml');
+        $entityManager->persist($chapter);
+
+        // Tlumaczenie samych zetonow przechodzi walidacje, a sklada sie do
+        // "<em></em>" - blok bez tekstu, ktory drugie wyliczenie blokow
+        // by pominelo.
+        $first = new Segment($chapter, 0, 0, 0, '[1]Foo[/1]', ['1' => '<em>']);
+        $first->setTranslatedText('[1][/1]');
+        $first->setStatus(SegmentStatus::Translated);
+
+        $second = new Segment($chapter, 1, 1, 0, 'Second.', []);
+        $second->setTranslatedText('Drugie.');
+        $second->setStatus(SegmentStatus::Translated);
+
+        $entityManager->persist($first);
+        $entityManager->persist($second);
+        $entityManager->flush();
+
+        return [$project, $chapter, $second];
     }
 
     /**

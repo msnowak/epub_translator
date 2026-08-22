@@ -34,6 +34,7 @@ use Symfony\Component\Uid\Uuid;
         ),
         new Patch(
             uriTemplate: '/segments/{id}',
+            security: 'object === null or is_granted("PROJECT_EDIT", object.getProject())',
             processor: UpdateSegmentProcessor::class,
         ),
         new Post(

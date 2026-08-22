@@ -23,8 +23,13 @@ final readonly class ChapterComposer
 
     /**
      * @param list<Segment> $segments segmenty rozdzialu w dowolnej kolejnosci
+     *
+     * @return list<\DOMElement> bloki w kolejnosci nadajacej nodeIndex - kto
+     *                           chce je jeszcze oznaczyc, ma uzyc tej listy,
+     *                           bo drugie przejscie po zlozonym dokumencie
+     *                           moze zwrocic inny zestaw blokow
      */
-    public function compose(\DOMDocument $document, array $segments): void
+    public function compose(\DOMDocument $document, array $segments): array
     {
         $elements = $this->blockExtractor->elements($document);
 
@@ -45,6 +50,8 @@ final readonly class ChapterComposer
 
             $this->xhtml->replaceInnerHtml($element, $translation);
         }
+
+        return $elements;
     }
 
     /**

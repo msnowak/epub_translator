@@ -154,6 +154,28 @@ final class ChapterComposerTest extends TestCase
         self::assertStringContainsString('<p>Two.</p>', $xhtml->save($document));
     }
 
+    public function testReturnsTheBlocksItWroteInto(): void
+    {
+        $xhtml = new XhtmlDocument();
+        $document = $xhtml->load($this->chapter('<p>This is <em>important</em>.</p><p>Second.</p>'));
+
+        // Zwracana lista jest ta sama, ktora nadaje nodeIndex - kto chce
+        // oznaczyc bloki po zlozeniu, nie moze liczyc ich drugi raz, bo blok
+        // bez tekstu (tu: samo "<em></em>") juz sie w nim nie pojawi.
+        $blocks = $this->composer()->compose($document, [
+            $this->segment(
+                nodeIndex: 0,
+                source: 'This is [1]important[/1].',
+                translation: '[1][/1]',
+                placeholders: ['1' => '<em>'],
+            ),
+        ]);
+
+        self::assertCount(2, $blocks);
+        self::assertSame('', trim(strip_tags($xhtml->innerHtml($blocks[0]))));
+        self::assertSame('Second.', $blocks[1]->textContent);
+    }
+
     private function composer(): ChapterComposer
     {
         $xhtml = new XhtmlDocument();

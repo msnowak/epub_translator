@@ -44,10 +44,14 @@ final readonly class ChapterPreviewRenderer
         $segments = $this->segments->findBy(['chapter' => $chapter], ['position' => 'ASC']);
 
         $document = $this->xhtml->load($source);
-        $this->composer->compose($document, $segments);
+        // Bloki z tego samego przejscia, ktore skladalo tlumaczenia: to ono
+        // wyznacza nodeIndex, a po podmianie tresci blok bez tekstu wypadlby
+        // z ponownego wyliczenia i przesunal identyfikatory kolejnych akapitow.
+        $blocks = $this->composer->compose($document, $segments);
 
         $this->decorator->decorate(
             $document,
+            $blocks,
             (string) $project->getId(),
             $chapter->getHref(),
             $this->segmentIdsByNodeIndex($segments),

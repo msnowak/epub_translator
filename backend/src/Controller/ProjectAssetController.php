@@ -19,6 +19,9 @@ use Symfony\Component\Uid\Uuid;
 /**
  * The only endpoint outside the JWT firewall - see AssetUrlSigner for why.
  * Requires both a valid signature and a path the EPUB's manifest declares.
+ * The bytes are the book's own, untouched by the preview's sanitisation, so
+ * every response is hardened against being interpreted as a document on our
+ * origin - a script served from here would sit next to the session.
  */
 final class ProjectAssetController
 {
@@ -29,6 +32,28 @@ final class ProjectAssetController
         methods: ['GET'],
     )]
     public function __invoke(
+        string $id,
+        string $path,
+        Request $request,
+        AssetUrlSigner $signer,
+        AssetPathResolver $resolver,
+        ProjectRepository $projects,
+        ProjectStorage $storage,
+        EpubReader $reader,
+    ): Response {
+        $response = $this->respond($id, $path, $request, $signer, $resolver, $projects, $storage, $reader);
+
+        // Naglowki ida na kazda odpowiedz, takze bledna: sciezka wyjscia
+        // nie moze decydowac o tym, czy tresc z ksiazki wykona sie na naszej
+        // domenie. "sandbox" bez wartosci odbiera skryptom origin, a
+        // default-src 'none' - dostep do czegokolwiek dalej.
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('Content-Security-Policy', "default-src 'none'; sandbox");
+
+        return $response;
+    }
+
+    private function respond(
         string $id,
         string $path,
         Request $request,
@@ -87,6 +112,8 @@ final class ProjectAssetController
             'png' => 'image/png',
             'jpg', 'jpeg' => 'image/jpeg',
             'gif' => 'image/gif',
+            // SVG musi zostac obrazem, zeby renderowalo sie w <img>; skrypt
+            // w srodku unieszkodliwia polityka CSP powyzej.
             'svg' => 'image/svg+xml',
             'webp' => 'image/webp',
             'css' => 'text/css',
@@ -94,7 +121,10 @@ final class ProjectAssetController
             'woff2' => 'font/woff2',
             'ttf' => 'font/ttf',
             'otf' => 'font/otf',
-            'xhtml', 'html' => 'application/xhtml+xml',
+            // Plik rozdzialu tez jest w manifescie, wiec da sie o niego
+            // poprosic. Wydany jako dokument wykonalby swoje skrypty na
+            // naszej domenie - podglad nigdy nie przechodzi ta droga.
+            'xhtml', 'html' => 'text/plain; charset=utf-8',
             default => 'application/octet-stream',
         };
     }
