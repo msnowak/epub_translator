@@ -99,6 +99,9 @@ final class EpubBuilder
         }
 
         $zip->addFromString('mimetype', 'application/epub+zip');
+        // OCF chce ten wpis bez kompresji. Fixture ma wygladac jak prawdziwa
+        // ksiazka, bo to na nim eksport dowodzi, ze niczego nie zepsul.
+        $zip->setCompressionName('mimetype', \ZipArchive::CM_STORE);
 
         if ($this->withContainerXml) {
             $zip->addFromString('META-INF/container.xml', <<<'XML'
