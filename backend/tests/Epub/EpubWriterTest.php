@@ -104,6 +104,30 @@ final class EpubWriterTest extends TestCase
         $this->writer()->write($source, ['OEBPS/nie-ma-takiego.xhtml' => $this->document('<p>X</p>')], $target);
     }
 
+    public function testLeavesNoTargetFileWhenALaterEntryDoesNotExist(): void
+    {
+        $source = EpubBuilder::create()
+            ->withChapter('ch1.xhtml', '<p>Hello</p>')
+            ->build();
+        $target = $this->targetPath();
+
+        try {
+            // ch1.xhtml istnieje i zdaza sie podmienic jako pierwszy - dopiero
+            // drugi wpis jest brakujacy. To sprawdza, ze juz zapisane
+            // podmiany nie zostaja na dysku po nieudanym write().
+            $this->writer()->write($source, [
+                'OEBPS/ch1.xhtml' => $this->document('<p>Witaj</p>'),
+                'OEBPS/nie-ma-takiego.xhtml' => $this->document('<p>X</p>'),
+            ], $target);
+
+            self::fail('Expected an InvalidEpubException.');
+        } catch (InvalidEpubException) {
+            // oczekiwane
+        }
+
+        self::assertFileDoesNotExist($target);
+    }
+
     public function testLeavesTheSourceArchiveAlone(): void
     {
         $source = EpubBuilder::create()->withChapter('ch1.xhtml', '<p>Hello</p>')->build();

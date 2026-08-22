@@ -39,12 +39,22 @@ final readonly class EpubWriter
         $zip = new \ZipArchive();
 
         if (true !== $zip->open($targetPath)) {
+            // Kopia juz lezy na dysku, ale nie da sie jej otworzyc jako
+            // archiwum - po throw targetPath ma nie istniec, wiec sprzatamy.
+            $this->filesystem->remove($targetPath);
+
             throw new InvalidEpubException('Could not open the copied archive for writing.');
         }
 
         foreach ($documents as $entry => $contents) {
             if (false === $zip->locateName($entry)) {
+                // Ta petla mogla juz podmienic wczesniejsze wpisy przez
+                // addFromString. Ten build ext-zip nie ma discard(), wiec
+                // unchangeAll() cofa te podmiany, zanim close() zdazyloby
+                // je zapisac na dysk - eksport ma byc wszystko albo nic.
+                $zip->unchangeAll();
                 $zip->close();
+                $this->filesystem->remove($targetPath);
 
                 // addFromString stworzyloby brakujacy wpis, czyli dolozyloby
                 // do ksiazki plik zamiast podmienic rozdzial.
@@ -62,6 +72,11 @@ final readonly class EpubWriter
         }
 
         if (true !== $zip->close()) {
+            // Nieudane zamkniecie moglo mimo to czesciowo zapisac dane na
+            // dysk - eksport ma byc wszystko albo nic, wiec nie zostawiamy
+            // polksiazki pod docelowa sciezka.
+            $this->filesystem->remove($targetPath);
+
             throw new InvalidEpubException('Could not finish writing the archive.');
         }
     }
