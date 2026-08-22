@@ -83,3 +83,12 @@ borrow the settings of an existing project. A model that keeps dropping tokens
 is a model to replace, not a bug to fix: a paragraph whose tokens are gone can
 no longer be written back into the book, so the translator retries it
 `MAX_TRANSLATION_ATTEMPTS` times and then marks that one paragraph failed.
+
+**The preview shows text but no images.** Chapter assets are served by
+`/api/projects/{id}/assets/{path}`, the one endpoint outside the JWT firewall:
+the browser issues those requests itself from inside the preview iframe, so no
+Authorization header is attached. They are covered by a short-lived signature
+the preview endpoint mints into every rewritten URL. A missing image usually
+means the signature expired — reload the chapter — or that the path is absent
+from the book's OPF manifest, which the endpoint checks before serving
+anything.
