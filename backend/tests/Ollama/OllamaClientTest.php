@@ -41,6 +41,9 @@ final class OllamaClientTest extends TestCase
         });
 
         $this->expectException(OllamaUnavailableException::class);
+        // Blad transportu ma nadal mowic o nieosiagalnym serwerze - to jedyny
+        // przypadek, w ktorym to prawda.
+        $this->expectExceptionMessageMatches('/Could not reach the Ollama server/');
 
         (new OllamaClient($http, 0.2))->listModels();
     }
@@ -121,5 +124,33 @@ final class OllamaClientTest extends TestCase
         $this->expectException(OllamaUnavailableException::class);
 
         (new OllamaClient($http, 0.2))->translate(new TranslationRequest('llama3.1:8b', 'system', 'user'));
+    }
+
+    public function testSaysWhatTheServerRefusedInsteadOfBlamingTheNetwork(): void
+    {
+        $http = new MockHttpClient(new MockResponse(
+            '{"error":"model \'llama3.1:8b\' not found"}',
+            ['http_code' => 404, 'response_headers' => ['content-type' => 'application/json']],
+        ));
+
+        $this->expectException(OllamaUnavailableException::class);
+        // Ollama odpowiada 404 na model, ktorego nie pobrano. Komunikat
+        // o nieosiagalnym serwerze wysylalby czytajacego w zla strone.
+        $this->expectExceptionMessageMatches("/model 'llama3.1:8b' not found/");
+
+        (new OllamaClient($http, 0.2))->translate(new TranslationRequest('llama3.1:8b', 'system', 'user'));
+    }
+
+    public function testTheModelListingReportsTheServerAnswerToo(): void
+    {
+        $http = new MockHttpClient(new MockResponse(
+            '{"error":"something went wrong"}',
+            ['http_code' => 500, 'response_headers' => ['content-type' => 'application/json']],
+        ));
+
+        $this->expectException(OllamaUnavailableException::class);
+        $this->expectExceptionMessageMatches('/something went wrong/');
+
+        (new OllamaClient($http, 0.2))->listModels();
     }
 }
