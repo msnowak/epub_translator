@@ -231,7 +231,7 @@ final class ChapterPreviewTest extends ApiTestCase
 
         $epubPath = EpubBuilder::create()
             ->withChapter('ch1.xhtml', '<p><img src="images/my%20image.png"/></p><p>A paragraph.</p>')
-            ->withImage('images/my image.png', $png)
+            ->withImage('images/my image.png', $png, 'images/my%20image.png')
             ->build();
 
         $storage = self::getContainer()->get(ProjectStorage::class);

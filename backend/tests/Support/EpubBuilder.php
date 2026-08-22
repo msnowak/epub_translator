@@ -19,6 +19,12 @@ final class EpubBuilder
     /** @var array<string, string> */
     private array $images = [];
 
+    /** @var array<string, string> */
+    private array $chapterManifestHrefs = [];
+
+    /** @var array<string, string> */
+    private array $imageManifestHrefs = [];
+
     private bool $withContainerXml = true;
     private bool $corrupted = false;
 
@@ -41,16 +47,23 @@ final class EpubBuilder
         return $this;
     }
 
-    public function withChapter(string $href, string $bodyHtml): self
+    /**
+     * @param string|null $manifestHref how the OPF declares the file, when that
+     *                                  differs from the zip entry name - a book
+     *                                  written to spec percent-encodes it
+     */
+    public function withChapter(string $href, string $bodyHtml, ?string $manifestHref = null): self
     {
         $this->chapters[$href] = $bodyHtml;
+        $this->chapterManifestHrefs[$href] = $manifestHref ?? $href;
 
         return $this;
     }
 
-    public function withImage(string $href, string $binaryContent): self
+    public function withImage(string $href, string $binaryContent, ?string $manifestHref = null): self
     {
         $this->images[$href] = $binaryContent;
+        $this->imageManifestHrefs[$href] = $manifestHref ?? $href;
 
         return $this;
     }
@@ -104,14 +117,22 @@ final class EpubBuilder
 
         foreach ($this->chapters as $href => $bodyHtml) {
             $id = 'chapter'.$index;
-            $manifest .= \sprintf('<item id="%s" href="%s" media-type="application/xhtml+xml"/>', $id, $href);
+            $manifest .= \sprintf(
+                '<item id="%s" href="%s" media-type="application/xhtml+xml"/>',
+                $id,
+                htmlspecialchars($this->chapterManifestHrefs[$href], ENT_XML1),
+            );
             $spine .= \sprintf('<itemref idref="%s"/>', $id);
             $zip->addFromString('OEBPS/'.$href, $this->chapterDocument($bodyHtml));
             ++$index;
         }
 
         foreach ($this->images as $href => $content) {
-            $manifest .= \sprintf('<item id="image%d" href="%s" media-type="image/png"/>', $index, $href);
+            $manifest .= \sprintf(
+                '<item id="image%d" href="%s" media-type="image/png"/>',
+                $index,
+                htmlspecialchars($this->imageManifestHrefs[$href], ENT_XML1),
+            );
             $zip->addFromString('OEBPS/'.$href, $content);
             ++$index;
         }

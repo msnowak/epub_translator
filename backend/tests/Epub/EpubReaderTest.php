@@ -66,6 +66,40 @@ final class EpubReaderTest extends TestCase
         $package->close();
     }
 
+    public function testDecodesPercentEncodedManifestHrefs(): void
+    {
+        $path = EpubBuilder::create()
+            ->withChapter('ch1.xhtml', '<p>Hello</p>')
+            ->withImage('images/my image.png', 'binary-content', 'images/my%20image.png')
+            ->build();
+
+        $package = (new EpubReader())->open($path);
+
+        // Href w OPF jest URL-em, nazwa wpisu w zipie nie. Bez dekodowania
+        // manifest opisuje plik, ktorego w archiwum nie ma.
+        self::assertContains('OEBPS/images/my image.png', $package->manifestHrefs());
+        self::assertSame('binary-content', $package->read('OEBPS/images/my image.png'));
+
+        $package->close();
+    }
+
+    public function testDecodesPercentEncodedSpineHrefs(): void
+    {
+        $path = EpubBuilder::create()
+            ->withChapter('rozdzial pierwszy.xhtml', '<p>Hello</p>', 'rozdzial%20pierwszy.xhtml')
+            ->build();
+
+        $package = (new EpubReader())->open($path);
+
+        // Spine czyta hrefy z manifestu, wiec dekodowanie obejmuje takze
+        // rozdzialy - to z nich powstaje Chapter::$href, po ktorym eksport
+        // siega do zipa.
+        self::assertSame(['OEBPS/rozdzial pierwszy.xhtml'], $package->spineHrefs());
+        self::assertStringContainsString('<p>Hello</p>', $package->read('OEBPS/rozdzial pierwszy.xhtml'));
+
+        $package->close();
+    }
+
     public function testRejectsArchiveWithoutContainerXml(): void
     {
         $path = EpubBuilder::create()
