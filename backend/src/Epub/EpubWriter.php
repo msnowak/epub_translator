@@ -41,7 +41,7 @@ final readonly class EpubWriter
         if (true !== $zip->open($targetPath)) {
             // Kopia juz lezy na dysku, ale nie da sie jej otworzyc jako
             // archiwum - po throw targetPath ma nie istniec, wiec sprzatamy.
-            $this->filesystem->remove($targetPath);
+            $this->discardTarget($targetPath);
 
             throw new InvalidEpubException('Could not open the copied archive for writing.');
         }
@@ -54,7 +54,7 @@ final readonly class EpubWriter
                 // je zapisac na dysk - eksport ma byc wszystko albo nic.
                 $zip->unchangeAll();
                 $zip->close();
-                $this->filesystem->remove($targetPath);
+                $this->discardTarget($targetPath);
 
                 // addFromString stworzyloby brakujacy wpis, czyli dolozyloby
                 // do ksiazki plik zamiast podmienic rozdzial.
@@ -75,9 +75,25 @@ final readonly class EpubWriter
             // Nieudane zamkniecie moglo mimo to czesciowo zapisac dane na
             // dysk - eksport ma byc wszystko albo nic, wiec nie zostawiamy
             // polksiazki pod docelowa sciezka.
-            $this->filesystem->remove($targetPath);
+            $this->discardTarget($targetPath);
 
             throw new InvalidEpubException('Could not finish writing the archive.');
+        }
+    }
+
+    /**
+     * Best-effort cleanup of a target that must not survive a failed write.
+     * Swallows a failed delete on purpose: the caller is already about to
+     * receive the real InvalidEpubException, and a stray IOException from
+     * remove() must never replace it and hide what actually went wrong.
+     */
+    private function discardTarget(string $targetPath): void
+    {
+        try {
+            $this->filesystem->remove($targetPath);
+        } catch (IOException) {
+            // celowo pomijamy - prawdziwy blad juz leci do wywolujacego,
+            // a nieudane sprzatanie nie moze go zaslonic.
         }
     }
 }
