@@ -136,7 +136,8 @@ final readonly class PreviewDecorator
      * Odsylacz w ksiazce nie jest zasobem podgladu: prowadzilby z tlumaczenia
      * do surowego pliku rozdzialu, ktory podpisalibysmy wlasna reka. Wartosc
      * zostaje dla edytora w data-epub-href, ale przegladarka nie ma juz dokad
-     * pojsc.
+     * pojsc. Wyjatkiem sa kotwice "#fragment" - te nie wychodza poza dokument,
+     * wiec zostaja zywe, inaczej przypisy przestaja dzialac.
      */
     private function detachLinks(\DOMDocument $document): void
     {
@@ -147,6 +148,13 @@ final readonly class PreviewDecorator
 
             foreach (iterator_to_array($element->attributes ?? []) as $attribute) {
                 if ('href' !== strtolower((string) $attribute->localName)) {
+                    continue;
+                }
+
+                if (str_starts_with(trim($attribute->value), '#')) {
+                    // Kotwica nawiguje w obrebie tego samego dokumentu i nie
+                    // prowadzi nigdzie na zewnatrz - zdjecie jej href-a
+                    // zabijalo przypisy w podgladzie.
                     continue;
                 }
 
@@ -230,7 +238,10 @@ final readonly class PreviewDecorator
             // wiec kontroler widzi nazwe pliku w postaci zdekodowanej.
             // Podpisujemy dokladnie ta postac - inaczej ksiazka z poprawnie
             // zakodowana spacja dostawalaby 403. Dekodujemy segment po
-            // segmencie, zeby "%2F" nie stalo sie separatorem sciezki.
+            // segmencie, tak samo jak EpubReader czyta manifest, zeby obie
+            // strony mialy te sama sciezke. Bariera to nie jest: "%2F" po
+            // zdekodowaniu jest ukosnikiem jak kazdy inny, a o tym, co wolno
+            // wydac, decyduje manifest sprawdzany przez AssetPathResolver.
             $segment = rawurldecode($segment);
 
             if ('' === $segment || '.' === $segment) {
