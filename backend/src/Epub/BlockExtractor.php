@@ -16,42 +16,50 @@ final readonly class BlockExtractor
         'li', 'blockquote', 'td', 'th', 'dt', 'dd', 'figcaption',
     ];
 
+    public function __construct(
+        private XhtmlDocument $xhtml,
+    ) {
+    }
+
     /**
      * @return list<Block>
      */
     public function extract(string $xhtml): array
     {
-        $document = new \DOMDocument();
-        $previous = libxml_use_internal_errors(true);
+        $document = $this->xhtml->load($xhtml);
+        $blocks = [];
 
-        try {
-            if (!$document->loadXML($xhtml)) {
-                throw new InvalidEpubException('Could not parse the chapter document.');
-            }
-        } finally {
-            libxml_clear_errors();
-            libxml_use_internal_errors($previous);
+        foreach ($this->elements($document) as $index => $element) {
+            $blocks[] = new Block($index, $this->xhtml->innerHtml($element));
         }
 
-        $blocks = [];
-        $index = 0;
+        return $blocks;
+    }
+
+    /**
+     * Bloki w tej samej kolejnosci, w ktorej extract() nadaje nodeIndex.
+     * Jedno miejsce decyduje o tym, co jest blokiem - inaczej zapis tlumaczen
+     * trafialby w inne wezly niz odczyt.
+     *
+     * @return list<\DOMElement>
+     */
+    public function elements(\DOMDocument $document): array
+    {
+        $elements = [];
 
         foreach ($this->candidates($document) as $element) {
             if ($this->containsNestedBlock($element)) {
                 continue;
             }
 
-            $innerHtml = $this->innerHtml($element);
-
-            if ('' === trim(strip_tags($innerHtml))) {
+            if ('' === trim(strip_tags($this->xhtml->innerHtml($element)))) {
                 continue;
             }
 
-            $blocks[] = new Block($index, $innerHtml);
-            ++$index;
+            $elements[] = $element;
         }
 
-        return $blocks;
+        return $elements;
     }
 
     /**
@@ -90,22 +98,5 @@ final readonly class BlockExtractor
         }
 
         return false;
-    }
-
-    private function innerHtml(\DOMElement $element): string
-    {
-        $document = $element->ownerDocument;
-
-        if (null === $document) {
-            throw new InvalidEpubException('The block element is detached from its document.');
-        }
-
-        $html = '';
-
-        foreach ($element->childNodes as $child) {
-            $html .= $document->saveXML($child);
-        }
-
-        return trim($html);
     }
 }
