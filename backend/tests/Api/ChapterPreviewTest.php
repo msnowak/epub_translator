@@ -70,6 +70,27 @@ final class ChapterPreviewTest extends ApiTestCase
         self::assertStringContainsString('A paragraph.', (string) $this->client->getResponse()->getContent());
     }
 
+    public function testSplitParagraphGetsExactlyOneSegmentIdFromItsFirstSubSegment(): void
+    {
+        $owner = $this->createUser();
+        [$project, $chapter, $firstSubSegment] = $this->projectWithSplitParagraph($owner);
+
+        $this->request(
+            'GET',
+            '/api/projects/'.$project->getId().'/preview/'.$chapter->getId(),
+            token: $this->authenticate($owner),
+        );
+
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getResponse()->getContent();
+
+        // Oba podsegmenty skladaja sie na jeden blok - powinien dostac
+        // dokladnie jedno "data-segment-id", i to od pierwszego podsegmentu.
+        self::assertSame(1, substr_count($html, 'data-segment-id='));
+        self::assertStringContainsString('data-segment-id="'.$firstSubSegment->getId().'"', $html);
+    }
+
     public function testStrangerCannotPreviewSomeoneElsesChapter(): void
     {
         $owner = $this->createUser('owner@example.com');
@@ -144,5 +165,40 @@ final class ChapterPreviewTest extends ApiTestCase
         $entityManager->flush();
 
         return [$project, $chapter];
+    }
+
+    /**
+     * @return array{Project, Chapter, Segment}
+     */
+    private function projectWithSplitParagraph(User $owner): array
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $project = ProjectFactory::create($entityManager, $owner);
+
+        $epubPath = EpubBuilder::create()
+            ->withChapter('ch1.xhtml', '<p>First sentence. Second sentence.</p>')
+            ->build();
+
+        $storage = self::getContainer()->get(ProjectStorage::class);
+        $project->setStoragePath($storage->store(new \SplFileInfo($epubPath), $project));
+
+        $chapter = new Chapter($project, 0, 'OEBPS/ch1.xhtml');
+        $entityManager->persist($chapter);
+
+        // Jeden blok, dwa podsegmenty tego samego nodeIndex - dokladnie
+        // przypadek, ktory segmentIdsByNodeIndex() ma zdedupikowac.
+        $first = new Segment($chapter, 0, 0, 0, 'First sentence.', []);
+        $first->setTranslatedText('Pierwsze zdanie.');
+        $first->setStatus(SegmentStatus::Translated);
+
+        $second = new Segment($chapter, 1, 0, 1, 'Second sentence.', []);
+        $second->setTranslatedText('Drugie zdanie.');
+        $second->setStatus(SegmentStatus::Translated);
+
+        $entityManager->persist($first);
+        $entityManager->persist($second);
+        $entityManager->flush();
+
+        return [$project, $chapter, $first];
     }
 }

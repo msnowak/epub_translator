@@ -148,11 +148,9 @@ final readonly class PreviewDecorator
             : [substr($value, 0, $hash), substr($value, $hash)];
     }
 
-    /**
-     * Adresy w ksiazce sa wzgledem pliku rozdzialu, a nie korzenia zipa -
-     * bez tego "images/cover.png" z OEBPS/ch1.xhtml szukaloby obrazu
-     * w korzeniu i nie znalazloby go.
-     */
+    // Adresy w ksiazce sa wzgledem pliku rozdzialu, a nie korzenia zipa -
+    // bez tego "images/cover.png" z OEBPS/ch1.xhtml szukaloby obrazu
+    // w korzeniu i nie znalazloby go.
     private function resolveAgainst(string $base, string $path): string
     {
         $segments = '' === $base ? [] : explode('/', $base);

@@ -57,9 +57,6 @@ final readonly class ChapterPreviewRenderer
     }
 
     /**
-     * Podzielony akapit ma kilka segmentow na jednym bloku; edytor adresuje
-     * blok pierwszym z nich, bo to on wyznacza poczatek akapitu.
-     *
      * @param list<Segment> $segments
      *
      * @return array<int, string>
@@ -69,6 +66,8 @@ final readonly class ChapterPreviewRenderer
         $ids = [];
 
         foreach ($segments as $segment) {
+            // Podzielony akapit ma kilka segmentow na jednym bloku; edytor
+            // adresuje blok pierwszym z nich, bo to on wyznacza poczatek akapitu.
             if (0 === $segment->getSubIndex()) {
                 $ids[$segment->getNodeIndex()] = (string) $segment->getId();
             }
