@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Epub;
 
 /**
- * All DOM mechanics in one place, so BlockExtractor, ChapterComposer and the
- * preview decorator agree on how a chapter is parsed and serialised.
+ * All DOM mechanics in one place, so BlockExtractor, ChapterComposer, the
+ * preview decorator and the OPF metadata writer agree on how a document is
+ * parsed and serialised.
  */
 final readonly class XhtmlDocument
 {
@@ -20,7 +21,7 @@ final readonly class XhtmlDocument
 
         try {
             if (!$document->loadXML($xhtml)) {
-                throw new InvalidEpubException('Could not parse the chapter document.');
+                throw new InvalidEpubException('Could not parse the document.');
             }
         } finally {
             libxml_clear_errors();
