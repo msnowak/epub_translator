@@ -11,6 +11,7 @@ use App\Http\ProblemResponse;
 use App\Repository\ProjectRepository;
 use App\Security\ProjectVoter;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -75,12 +76,26 @@ final class ProjectDownloadController
             // build() juz zwrocilo - bez tego catcha kazdy wyjatek miedzy tym
             // momentem a deleteFileAfterSend(true) osierocalby zbudowana
             // kopie ksiazki w katalogu tymczasowym.
-            $filesystem->remove($path);
+            $this->discardFile($filesystem, $path);
 
             throw $exception;
         }
 
         return $response;
+    }
+
+    /**
+     * Best-effort cleanup, like EpubWriter's own: the real exception is
+     * already on its way to the caller and a failed delete must not replace it.
+     */
+    private function discardFile(Filesystem $filesystem, string $path): void
+    {
+        try {
+            $filesystem->remove($path);
+        } catch (IOException) {
+            // celowo pomijamy - inaczej awaria sprzatania zaslonilaby powod,
+            // dla ktorego w ogole tu jestesmy.
+        }
     }
 
     private function disposition(Project $project): string
