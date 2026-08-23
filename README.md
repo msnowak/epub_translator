@@ -102,6 +102,19 @@ is a model to replace, not a bug to fix: a paragraph whose tokens are gone can
 no longer be written back into the book, so the translator retries it
 `MAX_TRANSLATION_ATTEMPTS` times and then marks that one paragraph failed.
 
+**A download or an API call returns a truncated file or an empty 500.** PHP in
+the container is capped at `max_execution_time = 30`, and changing anything in
+`config/` or `.env` invalidates the compiled container. Rebuilding it takes
+around a minute on a Windows bind mount, so the first request after such a
+change dies halfway through and drags the following ones with it - each starts
+the rebuild from scratch. The symptom is misleading: headers have already been
+sent, so the client keeps whatever bytes arrived rather than seeing an error.
+Rebuild from the CLI, where no time limit applies:
+
+```bash
+docker compose exec backend php bin/console cache:warmup --env=dev
+```
+
 **The preview shows text but no images.** Chapter assets are served by
 `/api/projects/{id}/assets/{path}`, the one endpoint outside the JWT firewall:
 the browser issues those requests itself from inside the preview iframe, so no
