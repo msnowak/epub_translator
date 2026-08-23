@@ -36,6 +36,24 @@ final class OpenApiTest extends ApiTestCase
         self::assertArrayNotHasKey('requestBody', $operation);
     }
 
+    #[DataProvider('controlOperations')]
+    public function testControlOperationsSayWhatTheyDo(string $path): void
+    {
+        $operation = $this->openApi()['paths'][$path]['post'] ?? null;
+
+        self::assertIsArray($operation);
+
+        $summary = $operation['summary'] ?? '';
+
+        self::assertIsString($summary);
+        // Domyslny opis API Platform dla operacji Post brzmi "Creates a X
+        // resource" - zadna z tych operacji niczego nie tworzy, a front czyta
+        // ten dokument jak kontrakt.
+        self::assertStringNotContainsString('Creates a', $summary);
+        self::assertNotSame('', $summary);
+        self::assertNotSame('', $operation['description'] ?? '');
+    }
+
     public function testUploadStillDocumentsItsMultipartBody(): void
     {
         $operation = $this->openApi()['paths']['/api/projects']['post'] ?? null;

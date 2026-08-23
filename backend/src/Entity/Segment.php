@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use App\Repository\SegmentRepository;
 use App\State\RetranslateSegmentProcessor;
 use App\State\SegmentCollectionProvider;
@@ -39,6 +40,10 @@ use Symfony\Component\Uid\Uuid;
         ),
         new Post(
             uriTemplate: '/segments/{id}/retranslate',
+            openapi: new OpenApiOperation(
+                summary: 'Translates one segment again.',
+                description: 'Clears the attempt budget and queues this segment alone, independently of the project chain. Answers 409 while the segment is being translated.',
+            ),
             security: 'object === null or is_granted("PROJECT_EDIT", object.getProject())',
             read: true,
             deserialize: false,
