@@ -49,7 +49,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         // read: true wczytuje encje, bez ktorej "object" w wyrazeniu security
         // byloby puste, a procesor nie dostalby projektu. Te operacje nie maja
-        // ciala, stad deserialize: false.
+        // ciala, stad deserialize: false - a input: false zdejmuje z nich
+        // zmyslone "request body" w dokumencie OpenAPI, bo bez tego API
+        // Platform obiecuje czytajacemu schemat zapisu zasobu, ktorego te
+        // operacje i tak nie czytaja.
         //
         // ReadProvider celowo nie rzuca 404, gdy provider nic nie znajdzie dla
         // metody POST - POST zwykle tworzy zasob. OwnerExtension odfiltrowuje
@@ -61,6 +64,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             security: 'object === null or is_granted("PROJECT_EDIT", object)',
             read: true,
             deserialize: false,
+            input: false,
             processor: StartProjectProcessor::class,
         ),
         new Post(
@@ -68,6 +72,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             security: 'object === null or is_granted("PROJECT_EDIT", object)',
             read: true,
             deserialize: false,
+            input: false,
             processor: PauseProjectProcessor::class,
         ),
         new Post(
@@ -75,6 +80,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             security: 'object === null or is_granted("PROJECT_EDIT", object)',
             read: true,
             deserialize: false,
+            input: false,
             processor: ResumeProjectProcessor::class,
         ),
         new Post(
@@ -82,6 +88,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             security: 'object === null or is_granted("PROJECT_EDIT", object)',
             read: true,
             deserialize: false,
+            input: false,
             processor: CancelProjectProcessor::class,
         ),
         new Post(
@@ -89,6 +96,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             security: 'object === null or is_granted("PROJECT_EDIT", object)',
             read: true,
             deserialize: false,
+            input: false,
             processor: RetryFailedSegmentsProcessor::class,
         ),
     ],
