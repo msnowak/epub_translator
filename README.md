@@ -44,6 +44,24 @@ same image and needs the same vendor/ directory).
 The API is then available at `http://localhost:8000/api`, with OpenAPI docs
 at `http://localhost:8000/api/docs`.
 
+## Downloading the translated book
+
+`GET /api/projects/{id}/download` returns the book as `application/epub+zip`.
+The file is assembled per request from the stored original plus whatever
+translations exist at that moment, so it always reflects the latest manual
+corrections and is never cached.
+
+A project can be downloaded as soon as it has been parsed — including while
+the translation is still running. Paragraphs that have no translation yet, or
+whose translation failed, are written back in the original language, so the
+file always opens. Only `parsing` and `failed` projects refuse with `409`.
+
+Chapter text goes back into the book through the same code path the editor
+preview uses, so the downloaded file cannot disagree with what the preview
+showed. Images, fonts, stylesheets and navigation are copied byte for byte;
+the package document has its `dc:language` set to the target language and its
+`dc:title` to the project title.
+
 ## Running tests and static analysis
 
 ```bash
