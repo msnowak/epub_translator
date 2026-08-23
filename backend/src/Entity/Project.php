@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use App\Repository\ProjectRepository;
 use App\State\CancelProjectProcessor;
 use App\State\CreateProjectProcessor;
@@ -29,7 +30,11 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Index(fields: ['owner'], name: 'idx_project_owner')]
 #[ApiResource(
     operations: [
-        new GetCollection(uriTemplate: '/projects', provider: ProjectCollectionProvider::class),
+        new GetCollection(uriTemplate: '/projects',
+            openapi: new OpenApiOperation(
+                summary: 'Uploads a book and creates a project for it.',
+                description: 'Takes a multipart form, not JSON: file, title, targetLanguage and ollamaModel are required, sourceLanguage and customPrompt are optional. Parsing runs in the background, so the project comes back as parsing and turns ready once its chapters and segments exist.',
+            ), provider: ProjectCollectionProvider::class),
         new Get(uriTemplate: '/projects/{id}'),
         new Patch(
             uriTemplate: '/projects/{id}',
@@ -61,6 +66,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         // decyduje procesor, ktory odpowiada 404 tak samo jak GET i PATCH.
         new Post(
             uriTemplate: '/projects/{id}/start',
+            openapi: new OpenApiOperation(
+                summary: 'Starts translating the project.',
+                description: 'Queues the first pending segment; the chain re-queues itself until the book is done, paused or cancelled. Answers 409 unless the project is ready or cancelled.',
+            ),
             security: 'object === null or is_granted("PROJECT_EDIT", object)',
             read: true,
             deserialize: false,
@@ -69,6 +78,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new Post(
             uriTemplate: '/projects/{id}/pause',
+            openapi: new OpenApiOperation(
+                summary: 'Pauses a running translation.',
+                description: 'The segment in flight finishes and the chain stops there. Answers 409 unless the project is translating.',
+            ),
             security: 'object === null or is_granted("PROJECT_EDIT", object)',
             read: true,
             deserialize: false,
@@ -77,6 +90,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new Post(
             uriTemplate: '/projects/{id}/resume',
+            openapi: new OpenApiOperation(
+                summary: 'Resumes a paused translation.',
+                description: 'Releases segments left in processing by a worker that died, then restarts the chain from the first pending one. Answers 409 unless the project is paused.',
+            ),
             security: 'object === null or is_granted("PROJECT_EDIT", object)',
             read: true,
             deserialize: false,
@@ -85,6 +102,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new Post(
             uriTemplate: '/projects/{id}/cancel',
+            openapi: new OpenApiOperation(
+                summary: 'Cancels a running or paused translation.',
+                description: 'Stops the chain and releases segments left in processing. Translations already made are kept, and the project can be started again. Answers 409 unless the project is translating or paused.',
+            ),
             security: 'object === null or is_granted("PROJECT_EDIT", object)',
             read: true,
             deserialize: false,
@@ -93,6 +114,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new Post(
             uriTemplate: '/projects/{id}/retry-failed',
+            openapi: new OpenApiOperation(
+                summary: 'Queues every failed segment for another attempt.',
+                description: 'Clears the attempt budget of failed segments, releases segments left in processing and restarts the chain. Answers 409 while the translation is still running, or when nothing failed.',
+            ),
             security: 'object === null or is_granted("PROJECT_EDIT", object)',
             read: true,
             deserialize: false,
