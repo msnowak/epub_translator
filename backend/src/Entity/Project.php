@@ -16,7 +16,7 @@ use App\State\CancelProjectProcessor;
 use App\State\CreateProjectProcessor;
 use App\State\DeleteProjectProcessor;
 use App\State\PauseProjectProcessor;
-use App\State\ProjectCollectionProvider;
+use App\State\ProjectProvider;
 use App\State\ResumeProjectProcessor;
 use App\State\RetryFailedSegmentsProcessor;
 use App\State\StartProjectProcessor;
@@ -34,11 +34,18 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/projects',
             openapi: new OpenApiOperation(
                 summary: 'Lists the projects of the authenticated user.',
-                description: 'This is the only place the progress counters are filled in: segmentCounts holds the number of segments per status and totalSegments their sum. The single-project operation leaves both empty.',
+                description: 'segmentCounts holds the number of segments per status and totalSegments their sum. A status missing from the map has no segments in it.',
             ),
-            provider: ProjectCollectionProvider::class,
+            provider: ProjectProvider::class,
         ),
-        new Get(uriTemplate: '/projects/{id}'),
+        new Get(
+            uriTemplate: '/projects/{id}',
+            openapi: new OpenApiOperation(
+                summary: 'Returns one project with its progress counters.',
+                description: 'Carries the same segmentCounts and totalSegments as the collection.',
+            ),
+            provider: ProjectProvider::class,
+        ),
         new Patch(
             uriTemplate: '/projects/{id}',
             security: 'is_granted("PROJECT_EDIT", object)',
