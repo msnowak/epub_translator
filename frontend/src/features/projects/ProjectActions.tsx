@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { downloadProject } from '../../api/download'
 import { ApiError } from '../../api/problem'
 import { deleteProject, runAction, type ProjectAction } from '../../api/projects'
 import type { Project } from '../../api/types'
-import { canRun } from './status'
+import { canDownload, canRun } from './status'
 import { Button } from '@/components/ui/button'
 
 const ACTION_LABELS: Record<ProjectAction, string> = {
@@ -41,6 +42,12 @@ export function ProjectActions({ project }: { project: Project }) {
     onError: report,
   })
 
+  const download = useMutation({
+    mutationFn: () => downloadProject(project.id),
+    onMutate: () => setError(null),
+    onError: report,
+  })
+
   const remove = useMutation({
     mutationFn: () => deleteProject(project.id),
     onMutate: () => setError(null),
@@ -64,10 +71,21 @@ export function ProjectActions({ project }: { project: Project }) {
             {ACTION_LABELS[action]}
           </Button>
         ))}
+        {canDownload(project.status) ? (
+          <Button variant="secondary" disabled={download.isPending} onClick={() => download.mutate()}>
+            {download.isPending ? 'Przygotowywanie pliku…' : 'Pobierz książkę'}
+          </Button>
+        ) : null}
         <Button variant="destructive" onClick={() => setConfirmingDelete(true)}>
           Usuń projekt
         </Button>
       </div>
+
+      {canDownload(project.status) ? (
+        <p className="text-sm text-neutral-600">
+          Możesz pobrać książkę w każdej chwili — akapity bez tłumaczenia zostaną w oryginale.
+        </p>
+      ) : null}
 
       {confirmingDelete ? (
         <div className="flex flex-col gap-2 rounded-md border border-red-200 bg-red-50 p-4">
