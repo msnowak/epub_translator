@@ -16,7 +16,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class TokenRefreshController
 {
     #[Route('/api/token/refresh', name: 'api_token_refresh', methods: ['POST'])]
-    public function __invoke(
+    public function refresh(
         Request $request,
         RefreshTokenManager $refreshTokenManager,
         JWTTokenManagerInterface $jwtManager,
@@ -36,6 +36,20 @@ final class TokenRefreshController
         }
 
         $response = new JsonResponse(['token' => $jwtManager->create($user)]);
+        $response->headers->setCookie($cookie);
+
+        return $response;
+    }
+
+    #[Route('/api/token/refresh', name: 'api_token_logout', methods: ['DELETE'])]
+    public function logout(Request $request, RefreshTokenManager $refreshTokenManager): Response
+    {
+        // Ciasteczko ma path=/api/token/refresh, wiec wylogowanie musi siedziec
+        // pod tym samym adresem - pod innym przegladarka po prostu by go nie
+        // przyslala i nie byloby czego kasowac.
+        $cookie = $refreshTokenManager->revoke($request->cookies->get(RefreshTokenManager::COOKIE_NAME));
+
+        $response = new Response(status: Response::HTTP_NO_CONTENT);
         $response->headers->setCookie($cookie);
 
         return $response;

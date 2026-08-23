@@ -72,6 +72,32 @@ final readonly class RefreshTokenManager
         return [$user, $this->issue($user)];
     }
 
+    /**
+     * Deletes the stored token and returns a cookie that clears the browser's.
+     * Both cookies are built in this class so their attributes cannot drift
+     * apart - a clearing cookie with a different path clears nothing.
+     */
+    public function revoke(?string $plainToken): Cookie
+    {
+        if (null !== $plainToken && '' !== $plainToken) {
+            // Bez sprawdzania, czy cokolwiek skasowano: wylogowanie ma byc
+            // idempotentne, a token juz zuzyty to nie blad uzytkownika.
+            $this->repository->deleteByHash($this->hash($plainToken));
+        }
+
+        return Cookie::create(self::COOKIE_NAME, '')
+            // Jeden, nie zero: Symfony czyta zero jako "ciasteczko sesyjne",
+            // wiec z data wygasniecia rowna epoce przegladarka dostalaby
+            // ciasteczko do zachowania zamiast do skasowania.
+            ->withExpires(1)
+            ->withPath('/api/token/refresh')
+            ->withHttpOnly(true)
+            // Same choice as issue(): plain HTTP locally, to flip together
+            // with TLS.
+            ->withSecure(false)
+            ->withSameSite(Cookie::SAMESITE_LAX);
+    }
+
     private function hash(string $plainToken): string
     {
         return hash('sha256', $plainToken);

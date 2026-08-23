@@ -66,6 +66,26 @@ services:
       replicas: ${TRANSLATION_WORKERS:-1}
     restart: unless-stopped
 
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    environment:
+      # Adres API widziany z PRZEGLADARKI, nie z kontenera - to przegladarka
+      # wysyla te zadania. Musi byc ta sama nazwa hosta co w adresie SPA:
+      # localhost i 127.0.0.1 to dla ciasteczka dwa rozne site'y i odswiezanie
+      # sesji przestaloby dzialac.
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      # node_modules w nazwanym wolumenie: bind-mount z hosta by go przeslonil,
+      # a instalacja kilkudziesieciu tysiecy plikow przez warstwe bind-mountu
+      # Windowsa trwa wielokrotnie dluzej.
+      - frontend_node_modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+
 volumes:
   database_data:
   storage:
+  frontend_node_modules:

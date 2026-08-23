@@ -9,6 +9,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
 use App\Message\TranslateSegmentMessage;
+use App\Repository\SegmentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -21,6 +22,7 @@ final readonly class RetranslateSegmentProcessor implements ProcessorInterface
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
+        private SegmentRepository $segments,
         private MessageBusInterface $messageBus,
     ) {
     }
@@ -43,14 +45,7 @@ final readonly class RetranslateSegmentProcessor implements ProcessorInterface
 
         // Budzet prob liczy sie od nowa - inaczej segment, ktory go wyczerpal,
         // dostalby "failed" jeszcze przed pierwszym zapytaniem modelu.
-        $this->entityManager->createQueryBuilder()
-            ->update(Segment::class, 's')
-            ->set('s.attempts', '0')
-            ->set('s.errorMessage', 'NULL')
-            ->where('s.id = :id')
-            ->setParameter('id', $data->getId(), 'uuid')
-            ->getQuery()
-            ->execute();
+        $this->segments->resetAttempts($data);
 
         // Encja w tozsamosci Doctrine'a pamieta zuzyty budzet, bo UPDATE
         // powyzej omija ORM. Handler dostalby ja nieswieza i odmowil pracy.

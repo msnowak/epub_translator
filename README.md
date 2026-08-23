@@ -3,10 +3,14 @@
 A self-hosted tool for translating EPUB books using a local LLM served by
 [Ollama](https://ollama.com/). The backend is a Symfony 8 / API Platform 4
 application running on PHP 8.4 (FrankenPHP), backed by PostgreSQL and a
-Symfony Messenger worker for the (upcoming) translation pipeline. This
-repository currently covers the foundation stage: user accounts, JWT
-authentication with refresh tokens, and connectivity to Ollama. EPUB upload
-and translation land in later stages.
+Symfony Messenger worker that runs the translation. The frontend is a Vite +
+React + TypeScript single-page app.
+
+You can register an account, upload a book, watch it being translated
+paragraph by paragraph, pause and resume the run, and download the result as
+an EPUB that opens in a reader. Correcting individual paragraphs is possible
+through the API but does not have a screen yet - the three-column editor with
+a live chapter preview is the next stage.
 
 ## Prerequisites
 
@@ -41,8 +45,20 @@ docker compose exec backend php bin/console doctrine:migrations:migrate --no-int
 Until step 3 completes, the `worker` container will crash-loop (it runs the
 same image and needs the same vendor/ directory).
 
-The API is then available at `http://localhost:8000/api`, with OpenAPI docs
-at `http://localhost:8000/api/docs`.
+`docker compose up -d` also starts the `frontend` container, which installs
+its npm dependencies into a named volume on first start. That takes a minute
+or two, and the page is not served until it finishes:
+
+```bash
+docker compose logs -f frontend
+```
+
+The interface is then at `http://localhost:5173`, the API at
+`http://localhost:8000/api`, and the OpenAPI docs at
+`http://localhost:8000/api/docs` (those docs describe the API Platform
+resources only - `/api/me`, `/api/token/refresh`, `/api/ollama/models`, the
+preview, the assets and the download endpoint are plain Symfony controllers
+and do not appear there; `php bin/console debug:router` lists everything).
 
 ## Downloading the translated book
 
@@ -92,19 +108,17 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/projects/$PR
 curl -s -X POST http://localhost:8000/api/projects/$PROJECT/start \
   -H "Authorization: Bearer $TOKEN"
 
-# 6. Watch the progress - on the COLLECTION, which is where the counters live
-curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/projects
+# 6. Watch the progress - segmentCounts and totalSegments come with the
+#    project, on the collection and on the single project alike
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/projects/$PROJECT
 
 # 7. Download at any point after parsing
 curl -s -H "Authorization: Bearer $TOKEN" \
   http://localhost:8000/api/projects/$PROJECT/download -o out.epub
 ```
 
-Two things that bite in practice. `GET /api/projects/{id}` reports
-`"segmentCounts": []` and `"totalSegments": 0` no matter how far the translation
-has got - the counters are added by a provider wired only to the collection, so
-step 6 uses `/api/projects`. And on Windows PowerShell, `curl` is an alias for
-`Invoke-WebRequest`: use `curl.exe` or none of the above will parse.
+One thing that bites in practice: on Windows PowerShell, `curl` is an alias for
+`Invoke-WebRequest`, so use `curl.exe` or none of the above will parse.
 
 To see what the worker is doing, including why a paragraph was rejected:
 
@@ -121,7 +135,25 @@ docker compose exec backend composer stan
 
 `composer test` creates/migrates a separate `_test` database automatically.
 
+The frontend has three gates of its own. They run against mocked HTTP (MSW)
+and never touch a running backend:
+
+```bash
+docker compose exec frontend npm run test
+docker compose exec frontend npm run typecheck
+docker compose exec frontend npm run lint
+```
+
 ## Troubleshooting
+
+**Logging in works, but reloading the page throws you back to the login
+screen.** The access token lives in memory only, so after a reload the app
+restores the session from the `refresh_token` cookie - and that cookie is
+`SameSite=Lax`, for which `localhost` and `127.0.0.1` are two different sites.
+Open the interface and point `VITE_API_URL` at the *same* hostname: with the
+SPA on `http://localhost:5173`, the API has to be `http://localhost:8000`, not
+`http://127.0.0.1:8000`. The browser silently drops the cookie otherwise, and
+the only symptom is a `401` from `/api/token/refresh`.
 
 **Ollama is unreachable from the container.** `OLLAMA_BASE_URL` in `.env`
 defaults to `http://host.docker.internal:11434`, but by default Ollama binds

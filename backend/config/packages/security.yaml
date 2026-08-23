@@ -23,7 +23,7 @@ security:
                 username_path: email
                 password_path: password
                 success_handler: App\Security\JwtAuthenticationSuccessHandler
-                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+                failure_handler: App\Security\JwtAuthenticationFailureHandler
 
         refresh:
             pattern: ^/api/token/refresh$

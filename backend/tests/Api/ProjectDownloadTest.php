@@ -19,6 +19,22 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 final class ProjectDownloadTest extends ApiTestCase
 {
+    /** @var list<string> */
+    private array $temporaryFiles = [];
+
+    protected function tearDown(): void
+    {
+        foreach ($this->temporaryFiles as $path) {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+
+        $this->temporaryFiles = [];
+
+        parent::tearDown();
+    }
+
     public function testDownloadsABookWithTheTranslationInIt(): void
     {
         $owner = $this->createUser();
@@ -221,6 +237,10 @@ final class ProjectDownloadTest extends ApiTestCase
         if (false === $path) {
             self::fail('Could not create a temporary file.');
         }
+
+        // Plik zostaje na dysku do konca testu - wolajacy czyta z otwartego
+        // archiwum po powrocie stad; sprzata go dopiero tearDown().
+        $this->temporaryFiles[] = $path;
 
         file_put_contents($path, $bytes);
 
