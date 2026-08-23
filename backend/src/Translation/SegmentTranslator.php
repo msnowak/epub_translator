@@ -6,6 +6,7 @@ namespace App\Translation;
 
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
@@ -21,6 +22,7 @@ final readonly class SegmentTranslator
         private TranslationValidator $validator,
         #[Autowire('%env(int:MAX_TRANSLATION_ATTEMPTS)%')]
         private int $maxAttempts,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -42,10 +44,19 @@ final readonly class SegmentTranslator
 
             try {
                 $this->validator->validate($segment->getSourceText(), $translation);
-            } catch (TranslationRejectedException) {
-                // Techniczny powod odrzucenia zostaje w wyjatku. Uzytkownikowi
-                // nie pomoze "token 2 closes out of order" - jedyne sensowne
-                // akcje to ponowienie albo reczna poprawka w edytorze.
+            } catch (TranslationRejectedException $exception) {
+                // Powod techniczny idzie do logu, bo bez niego segment konczacy
+                // jako failed jest nie do zdiagnozowania: nie wiadomo, czy model
+                // zgubil zeton, wymyslil nowy, czy oddal oryginal bez zmian.
+                $this->logger->notice('Translation of segment {segment} rejected on attempt {attempt}: {reason}', [
+                    'segment' => (string) $segment->getId(),
+                    'attempt' => $segment->getAttempts(),
+                    'reason' => $exception->getMessage(),
+                ]);
+
+                // Uzytkownikowi "token 2 closes out of order" nie pomoze -
+                // jedyne sensowne akcje to ponowienie albo reczna poprawka
+                // w edytorze.
                 $lastRejection = \sprintf(
                     'Model nie zwrócił poprawnego tłumaczenia tego akapitu (%d prób).',
                     $segment->getAttempts(),

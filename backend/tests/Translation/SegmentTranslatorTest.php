@@ -11,6 +11,7 @@ use App\Entity\SegmentStatus;
 use App\Entity\User;
 use App\Ollama\OllamaUnavailableException;
 use App\Tests\Support\FakeTranslationEngine;
+use App\Tests\Support\RecordingLogger;
 use App\Translation\PromptBuilder;
 use App\Translation\SegmentTranslator;
 use App\Translation\TranslationEngineException;
@@ -117,9 +118,55 @@ final class SegmentTranslatorTest extends TestCase
         self::assertStringContainsString('Kapitan przemówił.', $request->userPrompt);
     }
 
-    private function translator(FakeTranslationEngine $engine, int $maxAttempts = 3): SegmentTranslator
+    public function testLogsWhyTheModelAnswerWasRejected(): void
     {
-        return new SegmentTranslator(new PromptBuilder(), $engine, new TranslationValidator(), $maxAttempts);
+        $engine = new FakeTranslationEngine();
+        // Pierwsza odpowiedz gubi zeton, druga jest poprawna.
+        $engine->answerWith('To jest ważne.', 'To jest [1]ważne[/1].');
+
+        $logger = new RecordingLogger();
+        $segment = $this->segment('This is [1]important[/1].');
+
+        $this->translator($engine, logger: $logger)->translate($segment, null);
+
+        $records = $logger->records();
+
+        self::assertCount(1, $records);
+        self::assertSame('notice', $records[0]['level']);
+        // Uzytkownik dostaje komunikat ogolny, bo "dropped token 1" nic mu nie
+        // powie - ale bez powodu w logu nikt nie zdiagnozuje segmentu, ktory
+        // wrocil jako failed.
+        self::assertSame('The translation dropped token 1.', $records[0]['context']['reason'] ?? null);
+        self::assertSame((string) $segment->getId(), $records[0]['context']['segment'] ?? null);
+        self::assertSame(1, $records[0]['context']['attempt'] ?? null);
+    }
+
+    public function testLogsNothingWhenTheFirstAnswerValidates(): void
+    {
+        $engine = new FakeTranslationEngine();
+        $engine->answerWith('To jest [1]ważne[/1].');
+
+        $logger = new RecordingLogger();
+
+        $this->translator($engine, logger: $logger)->translate($this->segment('This is [1]important[/1].'), null);
+
+        // Log jest od odrzucen, nie od postepu - ten ostatni widac po statusach
+        // segmentow i w logu Messengera.
+        self::assertSame([], $logger->records());
+    }
+
+    private function translator(
+        FakeTranslationEngine $engine,
+        int $maxAttempts = 3,
+        ?RecordingLogger $logger = null,
+    ): SegmentTranslator {
+        return new SegmentTranslator(
+            new PromptBuilder(),
+            $engine,
+            new TranslationValidator(),
+            $maxAttempts,
+            $logger ?? new RecordingLogger(),
+        );
     }
 
     private function project(): Project
