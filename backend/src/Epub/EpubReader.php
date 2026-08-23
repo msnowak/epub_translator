@@ -32,6 +32,7 @@ final readonly class EpubReader
 
             return new EpubPackage(
                 $zip,
+                $opfPath,
                 $spine,
                 array_values($manifest),
                 $this->metadataValue($opf, 'title'),
@@ -72,7 +73,7 @@ final readonly class EpubReader
                 continue;
             }
 
-            $manifest[$id] = $this->resolve($opfDirectory, $href);
+            $manifest[$id] = $this->resolve($opfDirectory, $this->decode($href));
         }
 
         if ([] === $manifest) {
@@ -148,5 +149,19 @@ final readonly class EpubReader
     private function resolve(string $directory, string $href): string
     {
         return '' === $directory ? $href : $directory.'/'.$href;
+    }
+
+    /**
+     * An OPF href is a URL: a file called "my image.png" is declared as
+     * "my%20image.png". Zip entry names are not URLs, and neither is the path a
+     * controller sees once Symfony's router has decoded the request, so this is
+     * the form both the archive and the preview compare against.
+     */
+    private function decode(string $href): string
+    {
+        // Segment po segmencie, tak samo jak w PreviewDecorator - obie strony
+        // maja dostac te sama postac sciezki. Bariera to nie jest: o tym, co
+        // wolno wydac, decyduje manifest sprawdzany przez AssetPathResolver.
+        return implode('/', array_map(rawurldecode(...), explode('/', $href)));
     }
 }

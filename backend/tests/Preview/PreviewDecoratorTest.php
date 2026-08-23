@@ -112,6 +112,32 @@ final class PreviewDecoratorTest extends TestCase
         );
     }
 
+    public function testKeepsInDocumentAnchorsClickable(): void
+    {
+        $xhtml = new XhtmlDocument();
+        $document = $xhtml->load($this->chapter(
+            '<p><a href="#footnote">przypis</a><a href="ch2.xhtml">dalej</a></p>',
+        ));
+
+        $this->decorate($xhtml, $document, []);
+
+        $anchors = $document->getElementsByTagName('a');
+        $footnote = $anchors->item(0);
+        $chapterLink = $anchors->item(1);
+
+        self::assertInstanceOf(\DOMElement::class, $footnote);
+        self::assertInstanceOf(\DOMElement::class, $chapterLink);
+
+        // Asercja na DOM, nie na stringu: '"#footnote"' w zserializowanym
+        // dokumencie trafia tak samo w href, jak i w data-epub-href.
+        self::assertSame('#footnote', $footnote->getAttribute('href'));
+        self::assertFalse($footnote->hasAttribute('data-epub-href'));
+
+        // Odsylacz w glab ksiazki nadal ma zniknac z dokumentu.
+        self::assertFalse($chapterLink->hasAttribute('href'));
+        self::assertSame('ch2.xhtml', $chapterLink->getAttribute('data-epub-href'));
+    }
+
     public function testDoesNotSignAbsoluteUrlsOrAnchors(): void
     {
         $xhtml = new XhtmlDocument();
@@ -124,9 +150,18 @@ final class PreviewDecoratorTest extends TestCase
 
         $saved = $xhtml->save($document);
 
+        $anchors = $document->getElementsByTagName('a');
+        $external = $anchors->item(0);
+        $footnote = $anchors->item(1);
+
+        self::assertInstanceOf(\DOMElement::class, $external);
+        self::assertInstanceOf(\DOMElement::class, $footnote);
+
         self::assertStringContainsString('src="https://example.com/a.png"', $saved);
-        self::assertStringContainsString('https://example.com/a', $saved);
-        self::assertStringContainsString('"#footnote"', $saved);
+        // Adres bezwzgledny nie jest zasobem ksiazki, wiec wedruje do
+        // data-epub-href; kotwica zostaje zywym odnosnikiem.
+        self::assertSame('https://example.com/a', $external->getAttribute('data-epub-href'));
+        self::assertSame('#footnote', $footnote->getAttribute('href'));
         self::assertStringNotContainsString('/assets/', $saved);
     }
 

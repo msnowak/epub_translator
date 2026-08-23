@@ -181,6 +181,51 @@ final class ChapterPreviewTest extends ApiTestCase
         self::assertResponseStatusCodeSame(401);
     }
 
+    public function testPreviewCarriesItsOwnContentPolicy(): void
+    {
+        $owner = $this->createUser();
+        [$project, $chapter] = $this->projectWithChapter($owner, 'Przetłumaczony akapit.');
+
+        $this->request(
+            'GET',
+            '/api/projects/'.$project->getId().'/preview/'.$chapter->getId(),
+            token: $this->authenticate($owner),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('X-Content-Type-Options', 'nosniff');
+
+        $policy = (string) $this->client->getResponse()->headers->get('Content-Security-Policy');
+
+        // Polityka zasobow ("default-src 'none'; sandbox") zabilaby podgladowi
+        // wlasne obrazy i style, wiec ta jest skrojona - ale skrypt z ksiazki
+        // nadal nie ma sie jak wykonac.
+        self::assertStringContainsString("default-src 'none'", $policy);
+        self::assertStringContainsString("img-src 'self' data:", $policy);
+        self::assertStringContainsString("style-src 'self' 'unsafe-inline'", $policy);
+        self::assertStringContainsString('sandbox allow-same-origin', $policy);
+        self::assertStringNotContainsString('script-src', $policy);
+    }
+
+    public function testTheContentPolicyIsAlsoOnTheErrorResponse(): void
+    {
+        $owner = $this->createUser('owner@example.com');
+        $stranger = $this->createUser('stranger@example.com');
+        [$project, $chapter] = $this->projectWithChapter($owner, 'Przetłumaczony akapit.');
+
+        $this->request(
+            'GET',
+            '/api/projects/'.$project->getId().'/preview/'.$chapter->getId(),
+            token: $this->authenticate($stranger),
+        );
+
+        // Sciezka wyjscia z kontrolera nie moze decydowac o naglowkach -
+        // tak samo jak w ProjectAssetController.
+        self::assertResponseStatusCodeSame(404);
+        self::assertResponseHeaderSame('X-Content-Type-Options', 'nosniff');
+        self::assertNotNull($this->client->getResponse()->headers->get('Content-Security-Policy'));
+    }
+
     /**
      * @return array{Project, Chapter}
      */
@@ -231,7 +276,7 @@ final class ChapterPreviewTest extends ApiTestCase
 
         $epubPath = EpubBuilder::create()
             ->withChapter('ch1.xhtml', '<p><img src="images/my%20image.png"/></p><p>A paragraph.</p>')
-            ->withImage('images/my image.png', $png)
+            ->withImage('images/my image.png', $png, 'images/my%20image.png')
             ->build();
 
         $storage = self::getContainer()->get(ProjectStorage::class);

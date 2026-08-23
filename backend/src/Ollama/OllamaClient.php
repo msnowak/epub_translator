@@ -8,6 +8,7 @@ use App\Translation\TranslationEngineInterface;
 use App\Translation\TranslationRequest;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final readonly class OllamaClient implements TranslationEngineInterface
@@ -34,6 +35,11 @@ final readonly class OllamaClient implements TranslationEngineInterface
                     ],
                 ],
             ])->toArray();
+        } catch (HttpExceptionInterface $exception) {
+            throw new OllamaUnavailableException(
+                \sprintf('The Ollama server rejected the request: %s', $this->detail($exception)),
+                previous: $exception,
+            );
         } catch (ExceptionInterface $exception) {
             throw new OllamaUnavailableException(
                 \sprintf('Could not reach the Ollama server: %s', $exception->getMessage()),
@@ -61,6 +67,11 @@ final readonly class OllamaClient implements TranslationEngineInterface
             // if the server is hung rather than simply unreachable.
             /** @var array{models?: mixed} $data */
             $data = $this->httpClient->request('GET', 'api/tags', ['timeout' => 10])->toArray();
+        } catch (HttpExceptionInterface $exception) {
+            throw new OllamaUnavailableException(
+                \sprintf('The Ollama server rejected the request: %s', $this->detail($exception)),
+                previous: $exception,
+            );
         } catch (ExceptionInterface $exception) {
             throw new OllamaUnavailableException(
                 \sprintf('Could not reach the Ollama server: %s', $exception->getMessage()),
@@ -81,5 +92,33 @@ final readonly class OllamaClient implements TranslationEngineInterface
         }
 
         return $names;
+    }
+
+    /**
+     * Ollama answers 404 with {"error":"model 'x' not found"} - the one line
+     * that says what is actually wrong. Dropping it leaves the caller with
+     * "could not reach the server", which sends them off to look at the
+     * network instead.
+     */
+    private function detail(HttpExceptionInterface $exception): string
+    {
+        $response = $exception->getResponse();
+
+        try {
+            // false: tresc bledu jest tym, po co tu przyszlismy, wiec
+            // getContent() nie ma rzucac drugi raz na tym samym statusie.
+            $body = $response->getContent(false);
+        } catch (ExceptionInterface) {
+            return $exception->getMessage();
+        }
+
+        /** @var mixed $decoded */
+        $decoded = json_decode($body, true);
+
+        if (\is_array($decoded) && isset($decoded['error']) && \is_string($decoded['error'])) {
+            return \sprintf('HTTP %d: %s', $response->getStatusCode(), $decoded['error']);
+        }
+
+        return $exception->getMessage();
     }
 }

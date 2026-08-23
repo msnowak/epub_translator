@@ -12,11 +12,17 @@ final class EpubPackage
      */
     public function __construct(
         private readonly \ZipArchive $zip,
+        private readonly string $opfHref,
         private readonly array $spineHrefs,
         private readonly array $manifestHrefs,
         private readonly ?string $title,
         private readonly ?string $language,
     ) {
+    }
+
+    public function opfHref(): string
+    {
+        return $this->opfHref;
     }
 
     /**

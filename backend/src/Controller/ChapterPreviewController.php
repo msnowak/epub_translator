@@ -17,12 +17,41 @@ use Symfony\Component\Uid\Uuid;
 
 final class ChapterPreviewController
 {
+    /**
+     * The chapter is book content served as a document from our own origin, so
+     * it needs a policy of its own. It cannot be the one the assets endpoint
+     * uses: the preview has to load the book's images and stylesheets, which
+     * come back from that very endpoint. Nothing here grants scripts anything -
+     * an omitted directive falls back to default-src 'none' - and
+     * allow-same-origin is what keeps 'self' meaningful under the sandbox.
+     */
+    private const string CONTENT_SECURITY_POLICY = "default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'; sandbox allow-same-origin";
+
     #[Route(
         '/api/projects/{id}/preview/{chapterId}',
         name: 'api_chapter_preview',
         methods: ['GET'],
     )]
     public function __invoke(
+        string $id,
+        string $chapterId,
+        Security $security,
+        ProjectRepository $projects,
+        ChapterRepository $chapters,
+        ChapterPreviewRenderer $renderer,
+    ): Response {
+        $response = $this->respond($id, $chapterId, $security, $projects, $chapters, $renderer);
+
+        // Naglowki ida na kazda odpowiedz, takze bledna: sciezka wyjscia
+        // z kontrolera nie moze decydowac o tym, na jakich zasadach tresc
+        // z ksiazki laduje w przegladarce.
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('Content-Security-Policy', self::CONTENT_SECURITY_POLICY);
+
+        return $response;
+    }
+
+    private function respond(
         string $id,
         string $chapterId,
         Security $security,
