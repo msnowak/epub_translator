@@ -103,6 +103,32 @@ final class OllamaClientTest extends TestCase
         self::assertSame('przetłumacz to', $body['messages'][1]['content']);
     }
 
+    public function testTranslateTurnsTheModelThinkingOff(): void
+    {
+        $seen = null;
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = $options['body'] ?? '';
+
+            return new MockResponse(
+                '{"message":{"content":"wynik"}}',
+                ['response_headers' => ['content-type' => 'application/json']],
+            );
+        });
+
+        (new OllamaClient($http, 0.2))->translate(
+            new TranslationRequest('gemma4:12b', 'jesteś tłumaczem', 'przetłumacz to'),
+        );
+
+        /** @var array{think: bool} $body */
+        $body = json_decode((string) $seen, true, 512, JSON_THROW_ON_ERROR);
+
+        // Model rozumujacy oddaje rozumowanie w polu "thinking", a odpowiedz
+        // w "content" - i potrafi wypalic caly budzet tokenow na to pierwsze,
+        // zwracajac puste tlumaczenie po dwoch minutach. Tlumaczenie akapitu
+        // nie potrzebuje lancucha mysli.
+        self::assertFalse($body['think']);
+    }
+
     public function testTranslateThrowsWhenServerIsUnreachable(): void
     {
         $http = new MockHttpClient(static function (): never {

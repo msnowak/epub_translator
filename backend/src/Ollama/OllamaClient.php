@@ -28,6 +28,14 @@ final readonly class OllamaClient implements TranslationEngineInterface
                 'json' => [
                     'model' => $request->model,
                     'stream' => false,
+                    // Model rozumujacy (gemma4, gpt-oss, qwen3...) oddaje
+                    // rozumowanie w "thinking", a tlumaczenie w "content" -
+                    // i potrafi zuzyc caly budzet tokenow na to pierwsze,
+                    // konczac z pustym "content" po dwoch minutach. Zmierzone
+                    // na gemma4:12b: 135 s i puste tlumaczenie z myśleniem,
+                    // 3 s i poprawne bez niego. Ollama przyjmuje to pole takze
+                    // dla modeli, ktore myslenia nie maja.
+                    'think' => false,
                     'options' => ['temperature' => $this->temperature],
                     'messages' => [
                         ['role' => 'system', 'content' => $request->systemPrompt],
