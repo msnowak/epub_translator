@@ -30,11 +30,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Index(fields: ['owner'], name: 'idx_project_owner')]
 #[ApiResource(
     operations: [
-        new GetCollection(uriTemplate: '/projects',
+        new GetCollection(
+            uriTemplate: '/projects',
             openapi: new OpenApiOperation(
-                summary: 'Uploads a book and creates a project for it.',
-                description: 'Takes a multipart form, not JSON: file, title, targetLanguage and ollamaModel are required, sourceLanguage and customPrompt are optional. Parsing runs in the background, so the project comes back as parsing and turns ready once its chapters and segments exist.',
-            ), provider: ProjectCollectionProvider::class),
+                summary: 'Lists the projects of the authenticated user.',
+                description: 'This is the only place the progress counters are filled in: segmentCounts holds the number of segments per status and totalSegments their sum. The single-project operation leaves both empty.',
+            ),
+            provider: ProjectCollectionProvider::class,
+        ),
         new Get(uriTemplate: '/projects/{id}'),
         new Patch(
             uriTemplate: '/projects/{id}',
@@ -48,6 +51,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         new Post(
             uriTemplate: '/projects',
             status: 201,
+            openapi: new OpenApiOperation(
+                summary: 'Uploads a book and creates a project for it.',
+                description: 'Takes a multipart form, not JSON: file, title, targetLanguage and ollamaModel are required, sourceLanguage and customPrompt are optional. Parsing runs in the background, so the project comes back as parsing and turns ready once its chapters and segments exist.',
+            ),
             inputFormats: ['multipart' => ['multipart/form-data']],
             deserialize: false,
             processor: CreateProjectProcessor::class,
