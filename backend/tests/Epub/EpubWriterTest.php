@@ -12,6 +12,24 @@ use Symfony\Component\Filesystem\Filesystem;
 
 final class EpubWriterTest extends TestCase
 {
+    /** @var list<string> */
+    private array $temporaryFiles = [];
+
+    protected function tearDown(): void
+    {
+        foreach ($this->temporaryFiles as $path) {
+            // write() jest atomowy, wiec czesc testow konczy sie celowo bez
+            // pliku docelowego - stad sprawdzenie zamiast samego unlink().
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+
+        $this->temporaryFiles = [];
+
+        parent::tearDown();
+    }
+
     public function testKeepsTheMimetypeFirstAndUncompressed(): void
     {
         $source = EpubBuilder::create()->withChapter('ch1.xhtml', '<p>Hello</p>')->build();
@@ -188,6 +206,8 @@ final class EpubWriterTest extends TestCase
         if (false === $path) {
             self::fail('Could not create a temporary file.');
         }
+
+        $this->temporaryFiles[] = $path;
 
         return $path;
     }
