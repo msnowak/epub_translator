@@ -43,4 +43,13 @@ enum ProjectStatus: string
     {
         return \in_array($this, [self::CompletedWithErrors, self::Paused, self::Cancelled, self::Completed], true);
     }
+
+    /**
+     * Pobrac mozna wszystko, co ma juz strukture rozdzialow: nieprzetlumaczony
+     * akapit zostaje w oryginale, wiec plik zawsze da sie otworzyc.
+     */
+    public function canDownload(): bool
+    {
+        return !\in_array($this, [self::Parsing, self::Failed], true);
+    }
 }

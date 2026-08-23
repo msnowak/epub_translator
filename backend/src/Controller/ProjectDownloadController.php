@@ -1,0 +1,93 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller;
+
+use App\Entity\Project;
+use App\Epub\InvalidEpubException;
+use App\Export\TranslatedEpubBuilder;
+use App\Http\ProblemResponse;
+use App\Repository\ProjectRepository;
+use App\Security\ProjectVoter;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\HeaderUtils;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Uid\Uuid;
+
+/**
+ * Hands over the translated book. The file is built for this one request and
+ * deleted once it has been sent: there is nothing to invalidate, and every
+ * download carries the corrections made a second earlier in the editor.
+ */
+final class ProjectDownloadController
+{
+    #[Route(
+        '/api/projects/{id}/download',
+        name: 'api_project_download',
+        methods: ['GET'],
+    )]
+    public function __invoke(
+        string $id,
+        Security $security,
+        ProjectRepository $projects,
+        TranslatedEpubBuilder $builder,
+    ): Response {
+        if (!Uuid::isValid($id)) {
+            return $this->notFound();
+        }
+
+        $project = $projects->find(Uuid::fromString($id));
+
+        // Cudzy projekt dostaje 404, nie 403 - identyfikator nie ma
+        // potwierdzac, ze taki projekt istnieje.
+        if (null === $project || !$security->isGranted(ProjectVoter::VIEW, $project)) {
+            return $this->notFound();
+        }
+
+        if (!$project->getStatus()->canDownload()) {
+            return ProblemResponse::create(
+                Response::HTTP_CONFLICT,
+                'Ten projekt nie ma jeszcze książki do pobrania.',
+            );
+        }
+
+        try {
+            $path = $builder->build($project);
+        } catch (InvalidEpubException) {
+            return ProblemResponse::create(
+                Response::HTTP_NOT_FOUND,
+                'Nie udało się złożyć pliku EPUB z tego projektu.',
+            );
+        }
+
+        $response = new BinaryFileResponse($path);
+        $response->headers->set('Content-Type', 'application/epub+zip');
+        $response->headers->set('Content-Disposition', $this->disposition($project));
+        $response->deleteFileAfterSend(true);
+
+        return $response;
+    }
+
+    private function disposition(Project $project): string
+    {
+        $name = \sprintf('%s-%s.epub', $project->getTitle(), $project->getTargetLanguage());
+        $fallback = trim((string) preg_replace('/[^A-Za-z0-9._-]+/', '-', $name), '-.');
+
+        // Fallback musi byc czystym ASCII bez ukosnikow - tytul cyrylica albo
+        // po chinsku zostawilby po sobie sam ogryzek, wiec wtedy wolimy
+        // nazwe neutralna niz dziwna.
+        if (!str_ends_with($fallback, '.epub')) {
+            $fallback = 'book.epub';
+        }
+
+        return HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $name, $fallback);
+    }
+
+    private function notFound(): Response
+    {
+        return ProblemResponse::create(Response::HTTP_NOT_FOUND, 'Nie znaleziono projektu.');
+    }
+}

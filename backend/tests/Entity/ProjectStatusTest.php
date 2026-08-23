@@ -54,4 +54,18 @@ final class ProjectStatusTest extends TestCase
         self::assertFalse(ProjectStatus::Translating->canRetryFailed());
         self::assertFalse(ProjectStatus::Parsing->canRetryFailed());
     }
+
+    public function testEverythingWithAParsedStructureCanBeDownloaded(): void
+    {
+        self::assertTrue(ProjectStatus::Ready->canDownload());
+        self::assertTrue(ProjectStatus::Translating->canDownload());
+        self::assertTrue(ProjectStatus::Paused->canDownload());
+        self::assertTrue(ProjectStatus::Completed->canDownload());
+        self::assertTrue(ProjectStatus::CompletedWithErrors->canDownload());
+        self::assertTrue(ProjectStatus::Cancelled->canDownload());
+
+        // Parsing nie ma jeszcze rozdzialow, failed nie ma czytelnego pliku.
+        self::assertFalse(ProjectStatus::Parsing->canDownload());
+        self::assertFalse(ProjectStatus::Failed->canDownload());
+    }
 }
