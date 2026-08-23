@@ -55,7 +55,15 @@ final readonly class EpubReader
             throw new InvalidEpubException('META-INF/container.xml does not point at a package document.');
         }
 
-        return $rootfile->getAttribute('full-path');
+        $declared = $rootfile->getAttribute('full-path');
+        $decoded = $this->decode($declared);
+
+        // Rozstrzyga archiwum, nie specyfikacja: ksiazka zgodna z nia trzyma
+        // wpis pod nazwa zdekodowana, a naiwny generator - pod doslownym
+        // "%20", ktore deklaruje tak samo. Dekodujemy wiec, a gdy takiego wpisu
+        // nie ma, zostajemy przy postaci doslownej, zeby nie zepsuc ksiazek,
+        // ktore dzialaly do tej pory.
+        return false === $zip->locateName($decoded) ? $declared : $decoded;
     }
 
     /**
