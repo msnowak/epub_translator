@@ -62,6 +62,56 @@ showed. Images, fonts, stylesheets and navigation are copied byte for byte;
 the package document has its `dc:language` set to the target language and its
 `dc:title` to the project title.
 
+## Exercising the API by hand
+
+The whole path from a new account to a finished file, verified against a real
+book. Useful on its own, and it is the flow the frontend has to reproduce.
+
+```bash
+# 1. Register (the field is plainPassword, minimum 8 characters)
+curl -s -X POST http://localhost:8000/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"me@example.com","plainPassword":"correcthorse"}'
+
+# 2. Log in - the username field is "email", and the answer is {"token": "..."}
+curl -s -X POST http://localhost:8000/api/login_check \
+  -H "Content-Type: application/json" \
+  -d '{"email":"me@example.com","password":"correcthorse"}'
+
+# 3. Upload a book (multipart; title, targetLanguage and ollamaModel are required,
+#    sourceLanguage and customPrompt are optional)
+curl -s -X POST http://localhost:8000/api/projects \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/path/to/book.epub" -F "title=A book" \
+  -F "targetLanguage=pl" -F "ollamaModel=gemma4:12b" -F "sourceLanguage=en"
+
+# 4. Wait for parsing to finish: status goes parsing -> ready
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/projects/$PROJECT
+
+# 5. Start translating
+curl -s -X POST http://localhost:8000/api/projects/$PROJECT/start \
+  -H "Authorization: Bearer $TOKEN"
+
+# 6. Watch the progress - on the COLLECTION, which is where the counters live
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/projects
+
+# 7. Download at any point after parsing
+curl -s -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/api/projects/$PROJECT/download -o out.epub
+```
+
+Two things that bite in practice. `GET /api/projects/{id}` reports
+`"segmentCounts": []` and `"totalSegments": 0` no matter how far the translation
+has got - the counters are added by a provider wired only to the collection, so
+step 6 uses `/api/projects`. And on Windows PowerShell, `curl` is an alias for
+`Invoke-WebRequest`: use `curl.exe` or none of the above will parse.
+
+To see what the worker is doing, including why a paragraph was rejected:
+
+```bash
+docker compose logs -f worker
+```
+
 ## Running tests and static analysis
 
 ```bash
