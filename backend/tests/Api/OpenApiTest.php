@@ -65,6 +65,21 @@ final class OpenApiTest extends ApiTestCase
         self::assertSame(['multipart/form-data'], array_keys($operation['requestBody']['content']));
     }
 
+    public function testTheProjectCollectionAndTheUploadDoNotShareADescription(): void
+    {
+        $paths = $this->openApi()['paths']['/api/projects'];
+
+        $list = $paths['get']['summary'] ?? '';
+        $upload = $paths['post']['summary'] ?? '';
+
+        self::assertIsString($list);
+        self::assertIsString($upload);
+        // Obie operacje mieszkaja pod tym samym uriTemplate, wiec latwo opisac
+        // jedna tekstem drugiej - i tak sie stalo przy pierwszym podejsciu.
+        self::assertStringContainsString('Lists', $list);
+        self::assertStringContainsString('Uploads', $upload);
+    }
+
     /**
      * @return array{paths: array<string, array<string, array<string, mixed>>>}
      */
