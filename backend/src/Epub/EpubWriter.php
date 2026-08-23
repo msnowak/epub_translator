@@ -33,6 +33,12 @@ final readonly class EpubWriter
         try {
             $this->filesystem->copy($sourcePath, $targetPath, true);
         } catch (IOException $exception) {
+            // tempnam() u wywolujacego juz stworzylo targetPath jako plik
+            // 0-bajtowy, zanim write() w ogole zaczelo dzialac - nieudane
+            // copy() go nie rusza, wiec bez tego sprzatania zostalby po
+            // throw wbrew niezmiennikowi tej klasy.
+            $this->discardTarget($targetPath);
+
             throw new InvalidEpubException('Could not copy the source archive.', 0, $exception);
         }
 
@@ -61,7 +67,17 @@ final readonly class EpubWriter
                 throw new InvalidEpubException(\sprintf('The archive has no entry "%s" to replace.', $entry));
             }
 
-            $zip->addFromString($entry, $contents);
+            if (!$zip->addFromString($entry, $contents)) {
+                // Tak samo jak brakujacy wpis wyzej: eksport ma byc wszystko
+                // albo nic, wiec polowiczny zapis nie moze zostac na dysku,
+                // a czytelnik nie moze po cichu dostac nieprzetlumaczonego
+                // rozdzialu zamiast bledu.
+                $zip->unchangeAll();
+                $zip->close();
+                $this->discardTarget($targetPath);
+
+                throw new InvalidEpubException(\sprintf('Could not write the entry "%s" into the archive.', $entry));
+            }
         }
 
         if (false !== $zip->locateName(self::MIMETYPE_ENTRY)) {

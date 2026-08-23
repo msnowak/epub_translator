@@ -128,6 +128,26 @@ final class EpubWriterTest extends TestCase
         self::assertFileDoesNotExist($target);
     }
 
+    public function testLeavesNoTargetFileWhenTheSourceCannotBeCopied(): void
+    {
+        $target = $this->targetPath();
+
+        try {
+            // tempnam() juz stworzyl target jako plik o 0 bajtow, zanim write()
+            // w ogole zaczelo dzialac - to sam ten sam stan, w jakim
+            // TranslatedEpubBuilder go przekazuje. Nieistniejace zrodlo
+            // wywali Filesystem::copy() IOException-em zanim cokolwiek inne
+            // sie stanie.
+            $this->writer()->write('/nie/ma/takiego/pliku.epub', [], $target);
+
+            self::fail('Expected an InvalidEpubException.');
+        } catch (InvalidEpubException) {
+            // oczekiwane
+        }
+
+        self::assertFileDoesNotExist($target);
+    }
+
     public function testLeavesTheSourceArchiveAlone(): void
     {
         $source = EpubBuilder::create()->withChapter('ch1.xhtml', '<p>Hello</p>')->build();

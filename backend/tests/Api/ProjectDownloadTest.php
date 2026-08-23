@@ -75,6 +75,30 @@ final class ProjectDownloadTest extends ApiTestCase
         self::assertStringContainsString('.epub', $disposition);
     }
 
+    public function testATitleWithASlashStillDownloads(): void
+    {
+        $owner = $this->createUser();
+        $project = $this->projectWithChapter(
+            $owner,
+            'Przetłumaczony akapit.',
+            SegmentStatus::Translated,
+            title: 'Rok 1984 / Folwark zwierzęcy',
+        );
+
+        $this->download($project, $owner);
+
+        // HeaderUtils::makeDisposition() rzuca, gdy filename albo fallback
+        // niesie "/" lub "\" - a tytul projektu nie ma takiego ograniczenia.
+        // Przed poprawka to walilo sie 500-tka i zostawialo zbudowana kopie
+        // ksiazki osierocona w katalogu tymczasowym.
+        self::assertResponseIsSuccessful();
+
+        $disposition = (string) $this->client->getResponse()->headers->get('Content-Disposition');
+
+        self::assertStringNotContainsString('/', $disposition);
+        self::assertStringNotContainsString('\\', $disposition);
+    }
+
     public function testTheTemporaryFileIsGoneOnceTheDownloadHasBeenSent(): void
     {
         $owner = $this->createUser();
@@ -112,6 +136,33 @@ final class ProjectDownloadTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(409);
         self::assertSame('application/problem+json', $this->client->getResponse()->headers->get('Content-Type'));
+    }
+
+    public function testAProjectWhoseStoredFileIsUnreadableGets404(): void
+    {
+        $owner = $this->createUser();
+        $project = $this->projectWithChapter($owner, 'Przetłumaczony akapit.', SegmentStatus::Translated);
+
+        // Nadpisujemy plik po store() - projekt ma status Completed i status
+        // pozwala pobierac, ale sam plik na dysku przestal byc czytelnym
+        // EPUB-em. TranslatedEpubBuilder::build() rzuci InvalidEpubException.
+        file_put_contents((string) $project->getStoragePath(), 'to nie jest archiwum zip');
+
+        $this->download($project, $owner);
+
+        self::assertResponseStatusCodeSame(404);
+        self::assertSame('application/problem+json', $this->client->getResponse()->headers->get('Content-Type'));
+    }
+
+    public function testSetsANosniffHeaderLikeTheOtherBookEndpoints(): void
+    {
+        $owner = $this->createUser();
+        $project = $this->projectWithChapter($owner, 'Przetłumaczony akapit.', SegmentStatus::Translated);
+
+        $this->download($project, $owner);
+
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('X-Content-Type-Options', 'nosniff');
     }
 
     public function testAFailedProjectHasNothingToDownload(): void
@@ -184,9 +235,10 @@ final class ProjectDownloadTest extends ApiTestCase
         ?string $translation,
         SegmentStatus $segmentStatus,
         ProjectStatus $projectStatus = ProjectStatus::Completed,
+        string $title = 'Testowa książka',
     ): Project {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $project = ProjectFactory::create($entityManager, $owner, status: $projectStatus);
+        $project = ProjectFactory::create($entityManager, $owner, $title, $projectStatus);
 
         $epubPath = EpubBuilder::create()
             ->withLanguage('en')

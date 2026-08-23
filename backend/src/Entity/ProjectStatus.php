@@ -47,6 +47,10 @@ enum ProjectStatus: string
     /**
      * Pobrac mozna wszystko, co ma juz strukture rozdzialow: nieprzetlumaczony
      * akapit zostaje w oryginale, wiec plik zawsze da sie otworzyc.
+     *
+     * Jedyny predykat w tym enumie napisany jako lista wykluczen, a nie
+     * dopuszczen - celowo: nowy status domyslnie ma byc pobieralny, dopoki
+     * ktos swiadomie go stad nie wyrzuci.
      */
     public function canDownload(): bool
     {

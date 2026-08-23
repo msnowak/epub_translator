@@ -49,6 +49,57 @@ final class TranslatedEpubBuilderTest extends KernelTestCase
         $zip->close();
     }
 
+    public function testEachChapterGetsItsOwnTranslation(): void
+    {
+        self::bootKernel();
+        $container = self::getContainer();
+        $entityManager = $container->get(EntityManagerInterface::class);
+
+        $user = UserFactory::create($entityManager, $container->get(UserPasswordHasherInterface::class));
+        $project = ProjectFactory::create($entityManager, $user);
+
+        $epubPath = EpubBuilder::create()
+            ->withLanguage('en')
+            ->withChapter('ch1.xhtml', '<p>First paragraph.</p>')
+            ->withChapter('ch2.xhtml', '<p>Second paragraph.</p>')
+            ->build();
+
+        $project->setStoragePath($container->get(ProjectStorage::class)->store(new \SplFileInfo($epubPath), $project));
+
+        $chapter1 = new Chapter($project, 0, 'OEBPS/ch1.xhtml');
+        $chapter2 = new Chapter($project, 1, 'OEBPS/ch2.xhtml');
+        $entityManager->persist($chapter1);
+        $entityManager->persist($chapter2);
+
+        $segment1 = new Segment($chapter1, 0, 0, 0, 'First paragraph.', []);
+        $segment1->setStatus(SegmentStatus::Translated);
+        $segment1->setTranslatedText('Pierwszy akapit.');
+
+        $segment2 = new Segment($chapter2, 0, 0, 0, 'Second paragraph.', []);
+        $segment2->setStatus(SegmentStatus::Translated);
+        $segment2->setTranslatedText('Drugi akapit.');
+
+        $entityManager->persist($segment1);
+        $entityManager->persist($segment2);
+        $entityManager->flush();
+
+        $zip = $this->build($project);
+
+        $ch1 = (string) $zip->getFromName('OEBPS/ch1.xhtml');
+        $ch2 = (string) $zip->getFromName('OEBPS/ch2.xhtml');
+
+        // Kazdy rozdzial ma dostac wlasne tlumaczenie - petla po
+        // findForProjectInSpineOrder() nie moze wpisac tej samej tresci
+        // dwa razy pod dwoma roznymi kluczami mapy $documents.
+        self::assertStringContainsString('Pierwszy akapit.', $ch1);
+        self::assertStringNotContainsString('Drugi akapit.', $ch1);
+
+        self::assertStringContainsString('Drugi akapit.', $ch2);
+        self::assertStringNotContainsString('Pierwszy akapit.', $ch2);
+
+        $zip->close();
+    }
+
     public function testUpdatesTheLanguageAndTheTitle(): void
     {
         $project = $this->project('Przetłumaczony akapit.', SegmentStatus::Translated);
