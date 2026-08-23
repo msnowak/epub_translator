@@ -159,6 +159,24 @@ final class SegmentRepository extends ServiceEntityRepository
             ->execute();
     }
 
+    /**
+     * Clears the attempt budget of a single segment so it can be translated
+     * again from scratch.
+     */
+    public function resetAttempts(Segment $segment): void
+    {
+        $this->createQueryBuilder('s')
+            ->update()
+            // Literalne wyrazenia DQL, nie parametry: parametr o wartosci null
+            // trafia do sterownika bez typu i Doctrine potrafi go odrzucic.
+            ->set('s.attempts', '0')
+            ->set('s.errorMessage', 'NULL')
+            ->where('s.id = :id')
+            ->setParameter('id', $segment->getId(), 'uuid')
+            ->getQuery()
+            ->execute();
+    }
+
     private function countWithStatus(Project $project, SegmentStatus $status): int
     {
         return (int) $this->createQueryBuilder('s')
