@@ -42,6 +42,7 @@ use Symfony\Component\Uid\Uuid;
             security: 'object === null or is_granted("PROJECT_EDIT", object.getProject())',
             read: true,
             deserialize: false,
+            input: false,
             processor: RetranslateSegmentProcessor::class,
         ),
     ],
