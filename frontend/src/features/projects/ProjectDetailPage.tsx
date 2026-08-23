@@ -72,8 +72,12 @@ export function ProjectDetailPage() {
               ? chapters.error.detail
               : 'Nie udało się połączyć z serwerem.'}
           </p>
+        ) : chapters.isPending ? (
+          // Osobny stan, bo pusta tabela mowi "rozdzialow jeszcze nie ma",
+          // a to nieprawda, dopoki zapytanie leci.
+          <p className="text-neutral-500">Wczytywanie…</p>
         ) : (
-          <ChapterTable chapters={chapters.data ?? []} />
+          <ChapterTable chapters={chapters.data} />
         )}
       </div>
     </section>
