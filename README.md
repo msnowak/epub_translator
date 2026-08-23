@@ -184,6 +184,23 @@ is a model to replace, not a bug to fix: a paragraph whose tokens are gone can
 no longer be written back into the book, so the translator retries it
 `MAX_TRANSLATION_ATTEMPTS` times and then marks that one paragraph failed.
 
+**The browser reports a CORS error right after a branch switch, a merge or an
+edit under `config/`.** Something like *"No 'Access-Control-Allow-Origin'
+header is present on the requested resource"* on `/api/token/refresh` or
+`/api/login_check`. CORS is almost certainly configured correctly - check it
+from inside the container before touching `nelmio_cors.yaml`:
+
+```bash
+docker compose exec backend curl -s -D - -o /dev/null -X OPTIONS http://localhost:8000/api/login_check -H "Origin: http://localhost:5173" -H "Access-Control-Request-Method: POST"
+```
+
+If that prints `Access-Control-Allow-Origin`, the configuration is fine and you
+are looking at the next entry: a request that died mid-rebuild sends no headers
+at all, and a response without headers is indistinguishable, from the browser's
+point of view, from a server that refuses the origin. `docker compose logs
+backend | grep "Maximum execution time"` confirms it. The fix is the same:
+warm the cache from the CLI.
+
 **A download or an API call returns a truncated file or an empty 500.** PHP in
 the container is capped at `max_execution_time = 30`, and changing anything in
 `config/` or `.env` invalidates the compiled container. Rebuilding it takes
