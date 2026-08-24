@@ -52,7 +52,7 @@ export interface Segment {
   translatedText: string | null
   status: SegmentStatus
   errorMessage: string | null
-  /** Znaczniki otwierające żetonów, już oczyszczone przez backend. */
+  /** The opening markup each token stands for, already sanitized by the backend so it is safe to inject into the preview document. */
   previewPlaceholders: Record<string, string>
   chapter: SegmentChapter
 }
