@@ -141,4 +141,30 @@ describe('useSegmentEditor', () => {
 
     expect(result.current.value).toBe('Po ponowieniu.')
   })
+
+  it('keeps an unsaved change when a new translation arrives from the server', () => {
+    // Zarejestrowany handler nie jest tu przedmiotem asercji - zabezpiecza
+    // przed onUnhandledRequest: 'error', gdyby debounce zapisu dobiegl konca
+    // (np. przy odmontowaniu na koniec testu) bez niego test by sie wywalil.
+    server.use(
+      http.patch(`${API}/api/segments/seg-1`, () => HttpResponse.json(segment)),
+    )
+
+    const { result, rerender } = renderHook(
+      ({ current }: { current: Segment }) =>
+        useSegmentEditor({ segment: current, chapterId: 'ch-1', onPreview: vi.fn() }),
+      { wrapper, initialProps: { current: segment } },
+    )
+
+    act(() => {
+      // Znaczniki zgadzaja sie ze zrodlem - to zwykla, nieblokowana edycja
+      // wciaz czekajaca w debouncie zapisu, nie przypadek "blocked".
+      result.current.change('Moja [1]niezapisana[/1] zmiana.')
+    })
+
+    // Wiersz jest w tym momencie dirty - odpowiedz z serwera nie moze wygrac.
+    rerender({ current: { ...segment, translatedText: 'Z serwera.' } })
+
+    expect(result.current.value).toBe('Moja [1]niezapisana[/1] zmiana.')
+  })
 })
