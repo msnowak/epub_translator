@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
@@ -16,6 +17,7 @@ use App\Repository\SegmentRepository;
 use App\State\ProjectSegmentCollectionProvider;
 use App\State\RetranslateSegmentProcessor;
 use App\State\SegmentCollectionProvider;
+use App\State\SegmentItemProvider;
 use App\State\UpdateSegmentProcessor;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -49,6 +51,11 @@ use Symfony\Component\Uid\Uuid;
             // w kluczu sortowania akapity roznych rozdzialow by sie przeplotly.
             order: ['chapter.spineOrder' => 'ASC', 'position' => 'ASC'],
             provider: ProjectSegmentCollectionProvider::class,
+        ),
+        new Get(
+            uriTemplate: '/segments/{id}',
+            security: 'object === null or is_granted("PROJECT_VIEW", object.getProject())',
+            provider: SegmentItemProvider::class,
         ),
         new Patch(
             uriTemplate: '/segments/{id}',

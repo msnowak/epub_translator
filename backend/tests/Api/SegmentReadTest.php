@@ -121,6 +121,39 @@ final class SegmentReadTest extends ApiTestCase
         self::assertArrayNotHasKey('4', $placeholders);
     }
 
+    public function testReadsASingleSegment(): void
+    {
+        $owner = $this->createUser();
+        $chapter = $this->chapterWithSegments($owner, 1);
+
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $segments = $entityManager->getRepository(Segment::class)->findBy(['chapter' => $chapter]);
+
+        $this->request('GET', '/api/segments/'.$segments[0]->getId(), token: $this->authenticate($owner));
+
+        self::assertResponseIsSuccessful();
+
+        /** @var array<string, mixed> $payload */
+        $payload = $this->payload();
+
+        self::assertSame('Paragraph 0.', $payload['sourceText']);
+        self::assertArrayHasKey('previewPlaceholders', $payload);
+    }
+
+    public function testStrangerCannotReadASingleSegment(): void
+    {
+        $owner = $this->createUser('owner@example.com');
+        $stranger = $this->createUser('stranger@example.com');
+        $chapter = $this->chapterWithSegments($owner, 1);
+
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $segments = $entityManager->getRepository(Segment::class)->findBy(['chapter' => $chapter]);
+
+        $this->request('GET', '/api/segments/'.$segments[0]->getId(), token: $this->authenticate($stranger));
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
     private function chapterWithSegments(User $owner, int $count): Chapter
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
