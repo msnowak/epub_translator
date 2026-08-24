@@ -7,6 +7,7 @@ namespace App\Tests\Preview;
 use App\Epub\BlockExtractor;
 use App\Epub\XhtmlDocument;
 use App\Preview\AssetUrlSigner;
+use App\Preview\ElementSanitizer;
 use App\Preview\PreviewDecorator;
 use PHPUnit\Framework\TestCase;
 
@@ -280,7 +281,7 @@ final class PreviewDecoratorTest extends TestCase
 
     private function decorator(): PreviewDecorator
     {
-        return new PreviewDecorator(new AssetUrlSigner('sekret'));
+        return new PreviewDecorator(new ElementSanitizer(new AssetUrlSigner('sekret')));
     }
 
     private function chapter(string $body): string
