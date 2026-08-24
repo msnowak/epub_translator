@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use App\Filter\SegmentStatusFilter;
 use App\Repository\SegmentRepository;
+use App\State\ProjectSegmentCollectionProvider;
 use App\State\RetranslateSegmentProcessor;
 use App\State\SegmentCollectionProvider;
 use App\State\UpdateSegmentProcessor;
@@ -22,6 +25,7 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity(repositoryClass: SegmentRepository::class)]
 #[ORM\Index(fields: ['project', 'status'], name: 'idx_segment_project_status')]
 #[ORM\UniqueConstraint(name: 'uniq_segment_node', columns: ['chapter_id', 'node_index', 'sub_index'])]
+#[ApiFilter(SegmentStatusFilter::class)]
 #[ApiResource(
     operations: [
         new GetCollection(
@@ -35,6 +39,16 @@ use Symfony\Component\Uid\Uuid;
             // tablica, wiec front nie mialby nawet jak zobaczyc, ze cos uciete.
             paginationEnabled: false,
             provider: SegmentCollectionProvider::class,
+        ),
+        new GetCollection(
+            uriTemplate: '/projects/{projectId}/segments',
+            uriVariables: [
+                'projectId' => new Link(fromClass: Project::class, toProperty: 'project'),
+            ],
+            // Position liczy sie od zera w kazdym rozdziale, wiec bez rozdzialu
+            // w kluczu sortowania akapity roznych rozdzialow by sie przeplotly.
+            order: ['chapter.spineOrder' => 'ASC', 'position' => 'ASC'],
+            provider: ProjectSegmentCollectionProvider::class,
         ),
         new Patch(
             uriTemplate: '/segments/{id}',
@@ -74,6 +88,7 @@ class Segment
 
     #[ORM\ManyToOne(targetEntity: Chapter::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    #[Groups(['segment:read'])]
     private Chapter $chapter;
 
     #[ORM\Column]
