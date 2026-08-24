@@ -9,6 +9,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
 use App\Message\TranslateSegmentMessage;
+use App\Preview\SegmentPlaceholderExposer;
 use App\Repository\SegmentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -24,6 +25,7 @@ final readonly class RetranslateSegmentProcessor implements ProcessorInterface
         private EntityManagerInterface $entityManager,
         private SegmentRepository $segments,
         private MessageBusInterface $messageBus,
+        private SegmentPlaceholderExposer $exposer,
     ) {
     }
 
@@ -52,6 +54,8 @@ final readonly class RetranslateSegmentProcessor implements ProcessorInterface
         $this->entityManager->refresh($data);
 
         $this->messageBus->dispatch(new TranslateSegmentMessage((string) $data->getId()));
+
+        $this->exposer->expose($data);
 
         return $data;
     }

@@ -7,6 +7,7 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\Entity\Segment;
+use App\Preview\SegmentPlaceholderExposer;
 use App\Repository\ChapterRepository;
 use App\Security\ProjectVoter;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -34,6 +35,7 @@ final readonly class SegmentCollectionProvider implements ProviderInterface
         private ProviderInterface $collectionProvider,
         private ChapterRepository $chapters,
         private Security $security,
+        private SegmentPlaceholderExposer $exposer,
     ) {
     }
 
@@ -62,6 +64,10 @@ final readonly class SegmentCollectionProvider implements ProviderInterface
             // opakowany provider zawsze oddaje kolekcje.
             throw new \LogicException('The Doctrine collection provider returned a single item.');
         }
+
+        // Paginator API Platform cache'uje swoj iterator, wiec przejscie po
+        // kolekcji tutaj nie robi drugiego zapytania.
+        $this->exposer->exposeAll($segments);
 
         return $segments;
     }

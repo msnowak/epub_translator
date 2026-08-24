@@ -93,6 +93,38 @@ final class SegmentReadTest extends ApiTestCase
         self::assertResponseStatusCodeSame(401);
     }
 
+    public function testSegmentCarriesInlineMarkupSafeForThePreview(): void
+    {
+        $owner = $this->createUser();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $project = ProjectFactory::create($entityManager, $owner);
+
+        $chapter = new Chapter($project, 0, 'OEBPS/ch1.xhtml', 'Rozdział pierwszy');
+        $entityManager->persist($chapter);
+        $entityManager->persist(new Segment($chapter, 0, 0, 0, 'A [1]word[/1].', [
+            '1' => '<em>',
+            '2' => '<a href="ch2.xhtml">',
+            '3' => '<span onclick="steal()">',
+            '4' => '<script>',
+        ]));
+        $entityManager->flush();
+
+        $this->request('GET', '/api/chapters/'.$chapter->getId().'/segments', token: $this->authenticate($owner));
+
+        /** @var list<array<string, mixed>> $payload */
+        $payload = $this->payload();
+        $placeholders = $payload[0]['previewPlaceholders'];
+
+        if (!\is_array($placeholders)) {
+            self::fail('previewPlaceholders nie jest mapą.');
+        }
+
+        self::assertSame('<em>', $placeholders['1']);
+        self::assertSame('<a data-epub-href="ch2.xhtml">', $placeholders['2']);
+        self::assertSame('<span>', $placeholders['3']);
+        self::assertArrayNotHasKey('4', $placeholders);
+    }
+
     private function chapterWithSegments(User $owner, int $count): Chapter
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);

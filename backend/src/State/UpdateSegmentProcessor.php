@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
+use App\Preview\SegmentPlaceholderExposer;
 use App\Translation\TranslationRejectedException;
 use App\Translation\TranslationValidator;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,6 +28,7 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
     public function __construct(
         private TranslationValidator $validator,
         private EntityManagerInterface $entityManager,
+        private SegmentPlaceholderExposer $exposer,
     ) {
     }
 
@@ -61,6 +63,8 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
         $data->setStatus(SegmentStatus::Edited);
         $data->setErrorMessage(null);
         $this->entityManager->flush();
+
+        $this->exposer->expose($data);
 
         return $data;
     }

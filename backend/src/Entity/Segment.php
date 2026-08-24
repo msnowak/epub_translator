@@ -109,6 +109,16 @@ class Segment
     private ?string $errorMessage = null;
 
     /**
+     * Inline markup for the editor's live preview, already run through the same
+     * rules as the whole chapter. There is no column behind it - a provider
+     * fills it at read time, the way Chapter::$segmentCounts works.
+     *
+     * @var array<string, string>
+     */
+    #[Groups(['segment:read'])]
+    private array $previewPlaceholders = [];
+
+    /**
      * @param array<array-key, string> $placeholders
      */
     public function __construct(
@@ -210,5 +220,17 @@ class Segment
     public function setErrorMessage(?string $errorMessage): void
     {
         $this->errorMessage = $errorMessage;
+    }
+
+    /** @return array<string, string> */
+    public function getPreviewPlaceholders(): array
+    {
+        return $this->previewPlaceholders;
+    }
+
+    /** @param array<string, string> $placeholders */
+    public function setPreviewPlaceholders(array $placeholders): void
+    {
+        $this->previewPlaceholders = $placeholders;
     }
 }
