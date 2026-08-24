@@ -30,7 +30,10 @@ use Symfony\Component\Uid\Uuid;
                 'chapterId' => new Link(fromClass: Chapter::class, toProperty: 'chapter'),
             ],
             order: ['position' => 'ASC'],
-            paginationItemsPerPage: 100,
+            // Rozdzial to jednostka ograniczona z natury, a edytor potrzebuje
+            // go w calosci. Przy Accept: application/json odpowiedz jest gola
+            // tablica, wiec front nie mialby nawet jak zobaczyc, ze cos uciete.
+            paginationEnabled: false,
             provider: SegmentCollectionProvider::class,
         ),
         new Patch(

@@ -52,7 +52,7 @@ final class SegmentReadTest extends ApiTestCase
         self::assertArrayHasKey('nodeIndex', $payload[0]);
     }
 
-    public function testPaginatesAtOneHundred(): void
+    public function testReturnsTheWholeChapterInOneResponse(): void
     {
         $owner = $this->createUser();
         $chapter = $this->chapterWithSegments($owner, 150);
@@ -62,14 +62,10 @@ final class SegmentReadTest extends ApiTestCase
         /** @var list<array<string, mixed>> $payload */
         $payload = $this->payload();
 
-        self::assertCount(100, $payload);
-
-        $this->request('GET', '/api/chapters/'.$chapter->getId().'/segments?page=2', token: $this->authenticate($owner));
-
-        /** @var list<array<string, mixed>> $second */
-        $second = $this->payload();
-
-        self::assertCount(50, $second);
+        // Edytor potrzebuje calego rozdzialu naraz: mapuje akapity na wezly
+        // podgladu po data-segment-id, a podglad niesie caly tekst rozdzialu.
+        self::assertCount(150, $payload);
+        self::assertSame('Paragraph 149.', $payload[149]['sourceText']);
     }
 
     public function testStrangerCannotListSomeoneElsesSegments(): void
