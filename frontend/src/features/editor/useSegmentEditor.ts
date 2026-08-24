@@ -112,7 +112,9 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
 
       // Wyjscie z rozdzialu nie moze zjesc zmiany czekajacej w debouncie.
       if (dirty.current) {
-        void updateSegment(segment.id, latest.current, { keepalive: true })
+        // Komponentu juz nie ma, wiec nie ma gdzie pokazac bledu - .catch
+        // tylko po to, zeby odrzucona obietnica nie zostala niezlapana.
+        updateSegment(segment.id, latest.current, { keepalive: true }).catch(() => {})
       }
     },
     [segment.id],
