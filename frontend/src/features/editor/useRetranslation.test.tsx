@@ -88,6 +88,42 @@ describe('useRetranslation', () => {
     expect(updated?.translatedText).toBe('Gotowe.')
   })
 
+  it('invalidates the project-wide failed list once a retranslated paragraph settles', async () => {
+    server.use(
+      http.post(`${API}/api/segments/seg-1/retranslate`, () =>
+        HttpResponse.json({ ...segment, status: 'processing' }),
+      ),
+      http.get(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json({ ...segment, status: 'translated', translatedText: 'Gotowe.', errorMessage: null }),
+      ),
+    )
+
+    const { Wrapper, client } = createWrapper()
+    // ProjectDetailPage nie zna id akapitu, wiec sprawdzamy dokladnie ten
+    // klucz-prefiks, po ktorym FailedSegments odczytuje swoje dane.
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
+
+    const { result } = renderHook(() => useRetranslation('ch-1'), { wrapper: Wrapper })
+
+    act(() => {
+      result.current.retranslate('seg-1')
+    })
+
+    // Bez tego punktu synchronizacji "size===0" ponizej moglby przejsc na
+    // stanie poczatkowym, zanim mutacja w ogole ruszyla - patrz test wyzej.
+    await waitFor(() => {
+      expect(result.current.awaiting.size).toBe(1)
+    })
+
+    await waitFor(() => {
+      expect(result.current.awaiting.size).toBe(0)
+    }, { timeout: 10000 })
+
+    // Bez tego wywolania widok projektu wciaz pokazywalby ten akapit jako
+    // nieudany, mimo ze poll juz go widzial przetlumaczonym.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['segments', 'failed'] })
+  })
+
   it('shows what the backend said when the paragraph is already being translated', async () => {
     server.use(
       http.post(`${API}/api/segments/seg-1/retranslate`, () =>

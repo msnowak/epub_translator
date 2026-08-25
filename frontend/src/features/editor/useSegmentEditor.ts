@@ -37,6 +37,10 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
       queryClient.setQueryData<Segment[]>(['segments', chapterId], (current) =>
         current?.map((item) => (item.id === saved.id ? saved : item)),
       )
+      // Zapisana recznie poprawka wraca jako "edited" - jesli akapit byl
+      // wczesniej "failed", projektowa lista nieudanych akapitow musi to
+      // zauwazyc, a nie trzymac stary blad.
+      void queryClient.invalidateQueries({ queryKey: ['segments', 'failed'] })
     },
     onError: (error: unknown) => {
       setState('error')

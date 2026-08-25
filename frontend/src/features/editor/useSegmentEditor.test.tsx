@@ -74,6 +74,39 @@ describe('useSegmentEditor', () => {
     expect(result.current.state).toBe('saved')
   })
 
+  it('invalidates the project-wide failed list once a manual correction saves', async () => {
+    server.use(
+      http.patch(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json({ ...segment, translatedText: 'Nowe [1]słowo[/1].', status: 'edited' }),
+      ),
+    )
+
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
+
+    function localWrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    }
+
+    const { result } = renderHook(
+      () => useSegmentEditor({ segment, chapterId: 'ch-1', onPreview: vi.fn() }),
+      { wrapper: localWrapper },
+    )
+
+    act(() => {
+      result.current.change('Nowe [1]słowo[/1].')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800)
+    })
+
+    expect(result.current.state).toBe('saved')
+    // Recznie poprawiony akapit wraca "edited" - lista nieudanych akapitow w
+    // widoku projektu musi to zauwazyc, a nie trzymac stary blad z cache.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['segments', 'failed'] })
+  })
+
   it('does not ask the backend to reject a half-typed token', async () => {
     const saved: string[] = []
 

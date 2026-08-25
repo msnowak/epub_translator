@@ -97,6 +97,10 @@ describe('ProjectDetailPage', () => {
           { id: 'c2', spineOrder: 1, title: null, segmentCounts: { translated: 47, failed: 3 }, totalSegments: 50 },
         ]),
       ),
+      // failed > 0 montuje FailedSegments, ktory odpytuje ta trase - poza
+      // zakresem tego testu (ma wlasny plik), ale bez handlera MSW
+      // wypisywalby "unhandled request" na kazde uruchomienie.
+      http.get(`${API}/api/projects/p1/segments`, () => HttpResponse.json([])),
     )
     renderWithProviders(<App />, { route: '/projekty/p1' })
 

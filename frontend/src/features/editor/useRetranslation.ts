@@ -34,6 +34,13 @@ export function useRetranslation(chapterId: string) {
     [chapterId, queryClient],
   )
 
+  // Osobny callback (nie surowe queryClient w tablicy zaleznosci ponizej) -
+  // ta sama stabilnosc referencji co "write", zeby efekt nie przezbrajal
+  // interwalu, gdy queryClient sie nie zmienil.
+  const invalidateFailedList = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['segments', 'failed'] })
+  }, [queryClient])
+
   const mutation = useMutation({
     mutationFn: (segmentId: string) => retranslateSegment(segmentId),
     onSuccess: (segment) => {
@@ -62,6 +69,11 @@ export function useRetranslation(chapterId: string) {
             if ('processing' === segment.status) {
               return
             }
+
+            // Paragraf mogl przestac byc "failed" (albo, po nieudanym
+            // ponowieniu, dopiero nim zostac) - widok projektu trzyma wlasna,
+            // niepowiazana liste nieudanych akapitow i musi ja odswiezyc.
+            invalidateFailedList()
 
             setAwaiting((current) => {
               const next = new Set(current)
@@ -94,7 +106,7 @@ export function useRetranslation(chapterId: string) {
     // Zaleznosc po hasAwaiting (bool), nie po samym awaiting (Set) - inny
     // Set przy kazdym dodaniu/usunieciu przezbrajalby interwal od nowa i
     // przesuwal czas kolejnego ticku dla akapitow juz oczekujacych.
-  }, [hasAwaiting, write])
+  }, [hasAwaiting, write, invalidateFailedList])
 
   const retranslate = useCallback(
     (segmentId: string) => {
