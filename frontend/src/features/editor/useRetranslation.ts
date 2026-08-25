@@ -16,6 +16,14 @@ export function useRetranslation(chapterId: string) {
   const [awaiting, setAwaiting] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Odczytywany przez tick interwalu, zeby ten zawsze widzial biezacy zbior
+  // oczekujacych id bez zmuszania efektu ponizej do restartu interwalu przy
+  // kazdym dodaniu lub usunieciu - patrz komentarz przy tablicy zaleznosci.
+  const awaitingRef = useRef<Set<string>>(awaiting)
+
+  useEffect(() => {
+    awaitingRef.current = awaiting
+  }, [awaiting])
 
   const write = useCallback(
     (segment: Segment) => {
@@ -38,13 +46,15 @@ export function useRetranslation(chapterId: string) {
     },
   })
 
+  const hasAwaiting = awaiting.size > 0
+
   useEffect(() => {
-    if (0 === awaiting.size) {
+    if (!hasAwaiting) {
       return
     }
 
     timer.current = setInterval(() => {
-      for (const id of awaiting) {
+      for (const id of awaitingRef.current) {
         void getSegment(id)
           .then((segment) => {
             write(segment)
@@ -81,7 +91,10 @@ export function useRetranslation(chapterId: string) {
         clearInterval(timer.current)
       }
     }
-  }, [awaiting, write])
+    // Zaleznosc po hasAwaiting (bool), nie po samym awaiting (Set) - inny
+    // Set przy kazdym dodaniu/usunieciu przezbrajalby interwal od nowa i
+    // przesuwal czas kolejnego ticku dla akapitow juz oczekujacych.
+  }, [hasAwaiting, write])
 
   const retranslate = useCallback(
     (segmentId: string) => {
