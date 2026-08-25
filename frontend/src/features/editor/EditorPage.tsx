@@ -11,6 +11,7 @@ import { ChapterNav } from './ChapterNav'
 import { PreviewPane } from './PreviewPane'
 import { SegmentList } from './SegmentList'
 import { applyTranslation, scrollSegmentIntoView } from './preview'
+import { useRetranslation } from './useRetranslation'
 
 export function EditorPage() {
   const { id = '', chapterId = '' } = useParams()
@@ -30,6 +31,7 @@ export function EditorPage() {
     queryKey: ['preview', id, chapterId],
     queryFn: () => loadChapterPreview(id, chapterId),
   })
+  const retranslation = useRetranslation(chapterId)
 
   const patchPreview = useCallback((segmentId: string, html: string) => {
     const document = frameRef.current?.contentDocument ?? null
@@ -95,6 +97,10 @@ export function EditorPage() {
           </Button>
         </header>
 
+        {null !== retranslation.error ? (
+          <p className="p-3 text-sm text-red-600">{retranslation.error}</p>
+        ) : null}
+
         {segments.isPending ? (
           <p className="p-4 text-neutral-500">Wczytywanie…</p>
         ) : 0 === visible.length ? (
@@ -108,7 +114,7 @@ export function EditorPage() {
             activeId={activeId}
             onPreview={patchPreview}
             onActivate={activate}
-            onRetranslate={() => undefined}
+            onRetranslate={retranslation.retranslate}
           />
         )}
       </section>

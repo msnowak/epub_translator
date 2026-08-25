@@ -1,0 +1,80 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ApiError } from '../../api/problem'
+import { getSegment, retranslateSegment } from '../../api/segments'
+import type { Segment } from '../../api/types'
+
+const POLL_MS = 2000
+
+/**
+ * Retranslating one paragraph is the only thing in the editor that changes
+ * server-side on its own, so it is the only thing the editor polls - one
+ * segment at a time, never the whole chapter.
+ */
+export function useRetranslation(chapterId: string) {
+  const queryClient = useQueryClient()
+  const [awaiting, setAwaiting] = useState<Set<string>>(new Set())
+  const [error, setError] = useState<string | null>(null)
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const write = useCallback(
+    (segment: Segment) => {
+      queryClient.setQueryData<Segment[]>(['segments', chapterId], (current) =>
+        current?.map((item) => (item.id === segment.id ? segment : item)),
+      )
+    },
+    [chapterId, queryClient],
+  )
+
+  const mutation = useMutation({
+    mutationFn: (segmentId: string) => retranslateSegment(segmentId),
+    onSuccess: (segment) => {
+      setError(null)
+      write(segment)
+      setAwaiting((current) => new Set(current).add(segment.id))
+    },
+    onError: (failure: unknown) => {
+      setError(failure instanceof ApiError ? failure.detail : 'Nie udało się ponowić tłumaczenia.')
+    },
+  })
+
+  useEffect(() => {
+    if (0 === awaiting.size) {
+      return
+    }
+
+    timer.current = setInterval(() => {
+      for (const id of awaiting) {
+        void getSegment(id).then((segment) => {
+          write(segment)
+
+          if ('processing' === segment.status) {
+            return
+          }
+
+          setAwaiting((current) => {
+            const next = new Set(current)
+            next.delete(segment.id)
+
+            return next
+          })
+        })
+      }
+    }, POLL_MS)
+
+    return () => {
+      if (null !== timer.current) {
+        clearInterval(timer.current)
+      }
+    }
+  }, [awaiting, write])
+
+  const retranslate = useCallback(
+    (segmentId: string) => {
+      mutation.mutate(segmentId)
+    },
+    [mutation],
+  )
+
+  return { retranslate, awaiting, error }
+}
