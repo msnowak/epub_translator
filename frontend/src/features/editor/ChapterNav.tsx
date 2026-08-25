@@ -1,11 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Chapter } from '../../api/types'
-
-export function chapterLabel(chapter: { spineOrder: number; title: string | null }): string {
-  // Rozdzial bez tytulu w OPF-ie i tak musi dac sie wskazac, stad numer
-  // z kolejnosci w spine.
-  return chapter.title ?? `Rozdział ${chapter.spineOrder + 1}`
-}
+import { chapterLabel } from '../projects/chapterLabel'
 
 interface Props {
   projectId: string

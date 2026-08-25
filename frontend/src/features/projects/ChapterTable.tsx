@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Chapter } from '../../api/types'
-import { chapterLabel } from '../editor/ChapterNav'
+import { chapterLabel } from './chapterLabel'
 
 export function ChapterTable({ chapters, projectId }: { chapters: Chapter[]; projectId: string }) {
   if (0 === chapters.length) {
