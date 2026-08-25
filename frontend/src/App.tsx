@@ -18,6 +18,8 @@ export default function App() {
           <Route path="/" element={<ProjectListPage />} />
           <Route path="/projekty/nowy" element={<ProjectWizardPage />} />
           <Route path="/projekty/:id" element={<ProjectDetailPage />} />
+        </Route>
+        <Route element={<AppLayout wide />}>
           <Route path="/projekty/:id/rozdzialy/:chapterId" element={<EditorPage />} />
         </Route>
       </Route>

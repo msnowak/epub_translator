@@ -84,7 +84,7 @@ export function EditorPage() {
   }
 
   return (
-    <div className="grid h-[calc(100vh-6rem)] grid-cols-[16rem_1fr_1fr]">
+    <div className="grid h-full grid-cols-[14rem_minmax(0,1fr)_minmax(0,1.35fr)]">
       {chapters.isPending ? (
         <p className="p-3 text-neutral-500">Wczytywanie…</p>
       ) : (
