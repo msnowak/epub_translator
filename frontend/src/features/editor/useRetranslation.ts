@@ -45,20 +45,34 @@ export function useRetranslation(chapterId: string) {
 
     timer.current = setInterval(() => {
       for (const id of awaiting) {
-        void getSegment(id).then((segment) => {
-          write(segment)
+        void getSegment(id)
+          .then((segment) => {
+            write(segment)
 
-          if ('processing' === segment.status) {
-            return
-          }
+            if ('processing' === segment.status) {
+              return
+            }
 
-          setAwaiting((current) => {
-            const next = new Set(current)
-            next.delete(segment.id)
+            setAwaiting((current) => {
+              const next = new Set(current)
+              next.delete(segment.id)
 
-            return next
+              return next
+            })
           })
-        })
+          .catch((failure: unknown) => {
+            // Cichy nieudany odczyt polowalby bez konca i bez sladu na
+            // ekranie - lepiej przerwac odpytywanie tego akapitu i pokazac,
+            // co poszlo nie tak, niz probowac w nieskonczonosc.
+            setError(failure instanceof ApiError ? failure.detail : 'Nie udało się sprawdzić stanu akapitu.')
+
+            setAwaiting((current) => {
+              const next = new Set(current)
+              next.delete(id)
+
+              return next
+            })
+          })
       }
     }, POLL_MS)
 
