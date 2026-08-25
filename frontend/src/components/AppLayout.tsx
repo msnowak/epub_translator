@@ -12,7 +12,7 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen flex-col">
       <header className="border-b">
         <div className={`flex items-center justify-between p-4 ${wide ? 'px-6' : 'mx-auto max-w-4xl'}`}>
           <Link className="font-semibold" to="/">
