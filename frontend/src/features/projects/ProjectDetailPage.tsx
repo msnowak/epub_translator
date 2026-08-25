@@ -77,7 +77,7 @@ export function ProjectDetailPage() {
           // a to nieprawda, dopoki zapytanie leci.
           <p className="text-neutral-500">Wczytywanie…</p>
         ) : (
-          <ChapterTable chapters={chapters.data} />
+          <ChapterTable chapters={chapters.data} projectId={id} />
         )}
       </div>
     </section>
