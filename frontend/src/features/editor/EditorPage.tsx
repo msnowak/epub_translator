@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { useCallback, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '../../api/problem'
 import { loadChapterPreview } from '../../api/preview'
@@ -15,6 +15,9 @@ import { useRetranslation } from './useRetranslation'
 
 export function EditorPage() {
   const { id = '', chapterId = '' } = useParams()
+  const [searchParams] = useSearchParams()
+  const requested = searchParams.get('akapit')
+  const jumped = useRef(false)
   const frameRef = useRef<HTMLIFrameElement>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [onlyFailed, setOnlyFailed] = useState(false)
@@ -50,6 +53,18 @@ export function EditorPage() {
       scrollSegmentIntoView(document, segmentId)
     }
   }, [])
+
+  useEffect(() => {
+    if (jumped.current || null === requested || undefined === segments.data) {
+      return
+    }
+
+    jumped.current = true
+    activate(requested)
+    // Wirtualizowana lista nie ma tego wiersza w DOM-ie, dopoki do niego nie
+    // dojedzie - dlatego przewijamy przez atrybut, a nie przez ref.
+    document.querySelector(`[data-segment-row="${requested}"]`)?.scrollIntoView({ block: 'center' })
+  }, [activate, requested, segments.data])
 
   const visible = useMemo(
     () => (segments.data ?? []).filter((segment) => !onlyFailed || 'failed' === segment.status),

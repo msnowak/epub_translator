@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../../api/problem'
 import { getProject, listChapters } from '../../api/projects'
 import { ChapterTable } from './ChapterTable'
+import { FailedSegments } from './FailedSegments'
 import { ProgressBar } from './ProgressBar'
 import { ProjectActions } from './ProjectActions'
 import { PROJECT_STATUS_LABELS, failedCount, isBusy } from './status'
@@ -80,6 +81,13 @@ export function ProjectDetailPage() {
           <ChapterTable chapters={chapters.data} projectId={id} />
         )}
       </div>
+
+      {failed > 0 ? (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-lg font-medium">Nieudane akapity</h2>
+          <FailedSegments projectId={id} />
+        </div>
+      ) : null}
     </section>
   )
 }
