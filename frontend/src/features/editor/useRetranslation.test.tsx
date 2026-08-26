@@ -62,7 +62,8 @@ describe('useRetranslation', () => {
     )
 
     const { Wrapper, client } = createWrapper()
-    const { result } = renderHook(() => useRetranslation('ch-1'), { wrapper: Wrapper })
+    const onPreview = vi.fn()
+    const { result } = renderHook(() => useRetranslation('ch-1', onPreview), { wrapper: Wrapper })
 
     act(() => {
       result.current.retranslate('seg-1')
@@ -86,6 +87,8 @@ describe('useRetranslation', () => {
 
     expect(updated?.status).toBe('translated')
     expect(updated?.translatedText).toBe('Gotowe.')
+    // Otwarty podglad ma zobaczyc to samo tlumaczenie, nie tylko cache.
+    expect(onPreview).toHaveBeenCalledWith('seg-1', 'Gotowe.')
   })
 
   it('invalidates the project-wide failed list once a retranslated paragraph settles', async () => {
@@ -103,7 +106,8 @@ describe('useRetranslation', () => {
     // klucz-prefiks, po ktorym FailedSegments odczytuje swoje dane.
     const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
 
-    const { result } = renderHook(() => useRetranslation('ch-1'), { wrapper: Wrapper })
+    const onPreview = vi.fn()
+    const { result } = renderHook(() => useRetranslation('ch-1', onPreview), { wrapper: Wrapper })
 
     act(() => {
       result.current.retranslate('seg-1')
@@ -135,7 +139,8 @@ describe('useRetranslation', () => {
     )
 
     const { Wrapper } = createWrapper()
-    const { result } = renderHook(() => useRetranslation('ch-1'), { wrapper: Wrapper })
+    const onPreview = vi.fn()
+    const { result } = renderHook(() => useRetranslation('ch-1', onPreview), { wrapper: Wrapper })
 
     act(() => {
       result.current.retranslate('seg-1')
@@ -160,7 +165,8 @@ describe('useRetranslation', () => {
     )
 
     const { Wrapper } = createWrapper()
-    const { result } = renderHook(() => useRetranslation('ch-1'), { wrapper: Wrapper })
+    const onPreview = vi.fn()
+    const { result } = renderHook(() => useRetranslation('ch-1', onPreview), { wrapper: Wrapper })
 
     act(() => {
       result.current.retranslate('seg-1')
@@ -203,7 +209,8 @@ describe('useRetranslation', () => {
       )
 
       const { Wrapper } = createWrapper()
-      const { result } = renderHook(() => useRetranslation('ch-1'), { wrapper: Wrapper })
+      const onPreview = vi.fn()
+      const { result } = renderHook(() => useRetranslation('ch-1', onPreview), { wrapper: Wrapper })
 
       // t=0: pierwszy akapit uzbraja interwal, ktory ma odpalic nastepny tick w t=2000.
       act(() => {

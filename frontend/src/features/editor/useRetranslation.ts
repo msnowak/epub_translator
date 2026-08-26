@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../api/problem'
 import { getSegment, retranslateSegment } from '../../api/segments'
 import type { Segment } from '../../api/types'
+import { detokenize } from './detokenize'
 
 const POLL_MS = 2000
 
@@ -11,7 +12,7 @@ const POLL_MS = 2000
  * server-side on its own, so it is the only thing the editor polls - one
  * segment at a time, never the whole chapter.
  */
-export function useRetranslation(chapterId: string) {
+export function useRetranslation(chapterId: string, onPreview: (segmentId: string, html: string) => void) {
   const queryClient = useQueryClient()
   const [awaiting, setAwaiting] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
@@ -39,10 +40,12 @@ export function useRetranslation(chapterId: string) {
   // interwalu, gdy queryClient sie nie zmienil.
   const invalidateFailedList = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['segments', 'failed'] })
-    // Ponowione tlumaczenie zmienia tresc rozdzialu tak samo jak reczna
-    // poprawka w useSegmentEditor - ten sam chwyt po prefiksie klucza, z
-    // refetchType: 'none', zeby nie przeladowac ramki otwartej wlasnie teraz
-    // (patrz komentarz przy analogicznym wywolaniu w useSegmentEditor).
+    // Zapytanie podgladu ma zostac tylko oznaczone jako nieaktualne (nie
+    // odswiezone teraz) - swiezy dokument tego rozdzialu i tak jest juz
+    // widoczny, bo wlasciwy "zywy" zapis do ramki robi onPreview() ponizej.
+    // To uniewaznienie jest tu na wypadek, gdyby ktos wrocil do rozdzialu
+    // pozniej z pustym cache'em (np. po odswiezeniu karty), a nie glowna
+    // sciezka aktualizacji podgladu.
     void queryClient.invalidateQueries({ queryKey: ['preview'], refetchType: 'none' })
   }, [queryClient])
 
@@ -73,6 +76,16 @@ export function useRetranslation(chapterId: string) {
 
             if ('processing' === segment.status) {
               return
+            }
+
+            if (null !== segment.translatedText) {
+              // Ponowienie skonczyle sie tlumaczeniem - wpisujemy je do
+              // otwartej wlasnie ramki tak samo, jak reczna edycja robi to
+              // przy kazdym klawiszu (patrz onPreview w useSegmentEditor).
+              // Nieudane ponowienie (segment.translatedText === null) nie ma
+              // czym podmienic wezla - lepiej zostawic stara tresc w
+              // podgladzie, niz wyczyscic akapit do pustego akapitu.
+              onPreview(segment.id, detokenize(segment.translatedText, segment.previewPlaceholders))
             }
 
             // Paragraf mogl przestac byc "failed" (albo, po nieudanym
@@ -111,7 +124,7 @@ export function useRetranslation(chapterId: string) {
     // Zaleznosc po hasAwaiting (bool), nie po samym awaiting (Set) - inny
     // Set przy kazdym dodaniu/usunieciu przezbrajalby interwal od nowa i
     // przesuwal czas kolejnego ticku dla akapitow juz oczekujacych.
-  }, [hasAwaiting, write, invalidateFailedList])
+  }, [hasAwaiting, write, invalidateFailedList, onPreview])
 
   const retranslate = useCallback(
     (segmentId: string) => {

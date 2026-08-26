@@ -223,6 +223,142 @@ describe('EditorPage', () => {
     expect(ch1Requests).toBe(1)
   }, 10000)
 
+  it('patches the open preview when a retranslation finishes', async () => {
+    // Ponowienie tlumaczenia zmienia serwer sam z siebie, wiec (w odroznieniu
+    // od recznej edycji) nic w tym przeplywie nie woalo dotad onPreview - do
+    // czasu tej poprawki podgladu w ogole to nie widzial, dopoki ktos nie
+    // wyszedl z rozdzialu i nie wrocil.
+    server.use(
+      http.post(`${API}/api/segments/seg-1/retranslate`, () =>
+        HttpResponse.json({
+          id: 'seg-1',
+          position: 0,
+          nodeIndex: 0,
+          subIndex: 0,
+          sourceText: 'A [1]word[/1].',
+          translatedText: null,
+          status: 'processing',
+          errorMessage: null,
+          previewPlaceholders: { '1': '<em>' },
+          chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
+        }),
+      ),
+      http.get(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json({
+          id: 'seg-1',
+          position: 0,
+          nodeIndex: 0,
+          subIndex: 0,
+          sourceText: 'A [1]word[/1].',
+          translatedText: 'Świeże [1]tłumaczenie[/1].',
+          status: 'translated',
+          errorMessage: null,
+          previewPlaceholders: { '1': '<em>' },
+          chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
+        }),
+      ),
+    )
+
+    renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+
+    const frame = screen.getByTitle('Podgląd rozdziału') as HTMLIFrameElement
+    const inner = frame.contentDocument
+
+    if (null === inner) {
+      throw new Error('brak contentDocument ramki w tym srodowisku testowym')
+    }
+
+    // jsdom nie wczytuje tresci srcdoc do contentDocument (znane
+    // ograniczenie tego silnika) - odtwarzamy tu recznie to, co w prawdziwej
+    // przegladarce zrobilby parser dokumentu wstrzyknietego przez srcDoc,
+    // zeby miec realny wezel [data-segment-id], ktory patchPreview podmienia.
+    inner.body.innerHTML = '<p data-segment-id="seg-1">Jakieś <em>słowo</em>.</p>'
+
+    await userEvent.click(screen.getByRole('button', { name: 'Przetłumacz ponownie' }))
+
+    await waitFor(
+      () => {
+        expect(inner.querySelector('[data-segment-id="seg-1"]')?.innerHTML).toBe(
+          'Świeże <em>tłumaczenie</em>.',
+        )
+      },
+      { timeout: 10000 },
+    )
+  }, 12000)
+
+  it('lets a focused paragraph keep its preview node while a retranslation for it lands', async () => {
+    // Ten sam wezel podgladu obsluguje reczna edycje i ponowione tlumaczenie
+    // - gdyby ponowienie wygralo wyscig z uzytkownikiem, ktory wlasnie
+    // ogląda/edytuje ten akapit, przez chwile pokazywaloby cudza tresc pod
+    // kursorem. Skupienie (focus) na polu tekstowym oznacza akapit jako
+    // aktywny; dopoki nim jest, retranslacja ma zostawic wezel w spokoju.
+    server.use(
+      http.post(`${API}/api/segments/seg-1/retranslate`, () =>
+        HttpResponse.json({
+          id: 'seg-1',
+          position: 0,
+          nodeIndex: 0,
+          subIndex: 0,
+          sourceText: 'A [1]word[/1].',
+          translatedText: null,
+          status: 'processing',
+          errorMessage: null,
+          previewPlaceholders: { '1': '<em>' },
+          chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
+        }),
+      ),
+      http.get(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json({
+          id: 'seg-1',
+          position: 0,
+          nodeIndex: 0,
+          subIndex: 0,
+          sourceText: 'A [1]word[/1].',
+          translatedText: 'Świeże [1]tłumaczenie[/1].',
+          status: 'translated',
+          errorMessage: null,
+          previewPlaceholders: { '1': '<em>' },
+          chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
+        }),
+      ),
+    )
+
+    renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+
+    const frame = screen.getByTitle('Podgląd rozdziału') as HTMLIFrameElement
+    const inner = frame.contentDocument
+
+    if (null === inner) {
+      throw new Error('brak contentDocument ramki w tym srodowisku testowym')
+    }
+
+    inner.body.innerHTML = '<p data-segment-id="seg-1">Jakieś <em>słowo</em>.</p>'
+
+    // jsdom nie implementuje scrollIntoView w zadnym realmie. Inne testy w
+    // tym pliku go nie potrzebuja, bo ich contentDocument zostaje pusty, wiec
+    // findBlock() nic nie znajduje - ten test celowo wypelnia contentDocument
+    // prawdziwym wezlem, a fokus nizej wywola scrollSegmentIntoView na nim,
+    // w realmie ramki (inny Element niz w tym pliku testowym - patrz preview.
+    // test.ts dla wyjasnienia, dlaczego to nie ten sam konstruktor).
+    if (null !== inner.defaultView) {
+      inner.defaultView.Element.prototype.scrollIntoView = () => {}
+    }
+
+    fireEvent.focus(screen.getByLabelText('Tłumaczenie akapitu 1'))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Przetłumacz ponownie' }))
+
+    // Odczekujemy dluzej niz jeden cykl odpytywania (2s), zeby dac
+    // retranslacji szanse dobiec konca i sprobowac podmienic wezel.
+    await new Promise((resolve) => setTimeout(resolve, 2500))
+
+    expect(inner.querySelector('[data-segment-id="seg-1"]')?.innerHTML).toBe('Jakieś <em>słowo</em>.')
+  }, 12000)
+
   it('keeps only the failed paragraphs when asked to', async () => {
     renderEditor()
 

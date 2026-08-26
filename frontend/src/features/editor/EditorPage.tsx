@@ -45,8 +45,6 @@ export function EditorPage() {
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   })
-  const retranslation = useRetranslation(chapterId)
-
   const patchPreview = useCallback((segmentId: string, html: string) => {
     const document = frameRef.current?.contentDocument ?? null
 
@@ -54,6 +52,38 @@ export function EditorPage() {
       applyTranslation(document, segmentId, html)
     }
   }, [])
+
+  // Odczytywany przez retranslationPreview ponizej, zeby ten callback moze
+  // zostac referencyjnie stabilny (tablica zaleznosci pusta poza patchPreview,
+  // ktory sam jest stabilny) - inaczej zmiana aktywnego akapitu przezbrajalaby
+  // interwal odpytywania w useRetranslation przy kazdym kliknieciu, tak jak
+  // opisuje to komentarz przy "awaitingRef" w tamtym haku.
+  const activeIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    activeIdRef.current = activeId
+  }, [activeId])
+
+  const retranslationPreview = useCallback(
+    (segmentId: string, html: string) => {
+      // Wiersz z fokusem to ten, ktory uzytkownik wlasnie ogląda albo edytuje
+      // - jego wlasny debounce w useSegmentEditor i tak wpisuje najnowsza
+      // tresc do tego samego wezla po kazdym klawiszu. Gdyby ponowione
+      // tlumaczenie nadpisalo ten wezel w tym momencie, wygraloby wyscig i
+      // przez chwile pokazywaloby cudza tresc pod kursorem piszacego, wiec
+      // manualna sciezka ma pierwszenstwo dla aktywnego wiersza. Kazdy inny
+      // wiersz (retranslacja akapitu, ktorego uzytkownik akurat nie edytuje)
+      // przyjmuje podmiane normalnie.
+      if (segmentId === activeIdRef.current) {
+        return
+      }
+
+      patchPreview(segmentId, html)
+    },
+    [patchPreview],
+  )
+
+  const retranslation = useRetranslation(chapterId, retranslationPreview)
 
   const activate = useCallback((segmentId: string) => {
     setActiveId(segmentId)
