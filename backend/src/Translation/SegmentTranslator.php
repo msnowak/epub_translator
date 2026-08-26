@@ -44,6 +44,10 @@ final readonly class SegmentTranslator
 
             try {
                 $this->validator->validate($segment->getSourceText(), $translation);
+                // Echo jest zawodnoscia modelu, nie problemem integralnosci -
+                // dotyczy wylacznie tej sciezki, wiec ta metoda nie jest
+                // wolana z UpdateSegmentProcessor.
+                $this->validator->assertNotEchoed($segment->getSourceText(), $translation);
             } catch (TranslationRejectedException $exception) {
                 // Powod techniczny idzie do logu, bo bez niego segment konczacy
                 // jako failed jest nie do zdiagnozowania: nie wiadomo, czy model

@@ -32,6 +32,29 @@ final class SegmentEditTest extends ApiTestCase
         self::assertSame('edited', $this->payload()['status']);
     }
 
+    public function testCorrectionIdenticalToLongSourceIsAccepted(): void
+    {
+        // Zgloszony z przegladarki przypadek: akapit bedacy samym adresem, a
+        // poprawne "tlumaczenie" jest znak w znak takie samo jak zrodlo. Regula
+        // wykrywania echa dotyczy silnika, nie czlowieka - tu nie ma niczego do
+        // wykrycia.
+        $owner = $this->createUser();
+        $source = '[1]https://aethonbooks.com/litrpg-newsletter/[/1]';
+        $segment = $this->segment($owner, $source, ['1' => '<a href="https://aethonbooks.com/litrpg-newsletter/">']);
+
+        $this->request(
+            'PATCH',
+            '/api/segments/'.$segment->getId(),
+            ['translatedText' => $source],
+            $this->authenticate($owner),
+            'application/merge-patch+json',
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($source, $this->payload()['translatedText']);
+        self::assertSame('edited', $this->payload()['status']);
+    }
+
     public function testCorrectionKeepingTokensIsAccepted(): void
     {
         $owner = $this->createUser();
@@ -123,6 +146,37 @@ final class SegmentEditTest extends ApiTestCase
         );
 
         self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testEmptyAndTokenRejectionsReportDifferentReasons(): void
+    {
+        $owner = $this->createUser();
+
+        $emptySegment = $this->segment($owner, 'This is [1]important[/1].', ['1' => '<em>']);
+        $this->request(
+            'PATCH',
+            '/api/segments/'.$emptySegment->getId(),
+            ['translatedText' => '   '],
+            $this->authenticate($owner),
+            'application/merge-patch+json',
+        );
+        self::assertResponseStatusCodeSame(422);
+        $emptyDetail = $this->payload()['detail'];
+
+        $brokenTokenSegment = $this->segment($owner, 'This is [1]important[/1].', ['1' => '<em>']);
+        $this->request(
+            'PATCH',
+            '/api/segments/'.$brokenTokenSegment->getId(),
+            ['translatedText' => 'To jest ważne.'],
+            $this->authenticate($owner),
+            'application/merge-patch+json',
+        );
+        self::assertResponseStatusCodeSame(422);
+        $tokenDetail = $this->payload()['detail'];
+
+        // Uzytkownik czytajacy "brakuje zetonow" przy pustym polu szukalby
+        // problemu tam, gdzie go nie ma.
+        self::assertNotSame($emptyDetail, $tokenDetail);
     }
 
     public function testStrangerCannotEditSomeoneElsesSegment(): void

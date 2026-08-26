@@ -20,6 +20,10 @@ final readonly class TranslationValidator
     private const int ECHO_THRESHOLD = 40;
 
     /**
+     * Integralnosc danych: pusty tekst, komplet zetonow tego samego rodzaju,
+     * poprawne zagniezdzenie. Dotyczy kazdego zapisu bez wzgledu na to, kto go
+     * wykonal - taki akapit nie da sie zlozyc z powrotem do EPUB-a.
+     *
      * @throws TranslationRejectedException
      */
     public function validate(string $source, string $translation): void
@@ -27,7 +31,7 @@ final readonly class TranslationValidator
         $trimmed = trim($translation);
 
         if ('' === $trimmed) {
-            throw new TranslationRejectedException('The engine returned an empty translation.');
+            throw TranslationRejectedException::emptyTranslation();
         }
 
         $sourceTokens = $this->tokenKinds($source);
@@ -35,24 +39,36 @@ final readonly class TranslationValidator
 
         foreach ($sourceTokens as $number => $kind) {
             if (!isset($translationTokens[$number])) {
-                throw new TranslationRejectedException(\sprintf('The translation dropped token %s.', $number));
+                throw TranslationRejectedException::tokenIntegrity(\sprintf('The translation dropped token %s.', $number));
             }
 
             if ($translationTokens[$number] !== $kind) {
-                throw new TranslationRejectedException(\sprintf('The translation changed token %s from %s to %s.', $number, $kind, $translationTokens[$number]));
+                throw TranslationRejectedException::tokenIntegrity(\sprintf('The translation changed token %s from %s to %s.', $number, $kind, $translationTokens[$number]));
             }
         }
 
         foreach ($translationTokens as $number => $kind) {
             if (!isset($sourceTokens[$number])) {
-                throw new TranslationRejectedException(\sprintf('The translation invented token %s.', $number));
+                throw TranslationRejectedException::tokenIntegrity(\sprintf('The translation invented token %s.', $number));
             }
         }
 
         $this->assertWellNested($translation);
+    }
 
-        if (mb_strlen(trim($source)) > self::ECHO_THRESHOLD && $trimmed === trim($source)) {
-            throw new TranslationRejectedException('The engine echoed the source text back unchanged.');
+    /**
+     * Wiarygodnosc odpowiedzi modelu: lapie silnik oddajacy wejscie zamiast
+     * tlumaczenia, czesta awaria malych modeli lokalnych. Dotyczy wylacznie
+     * sciezki silnika - dla czlowieka URL, nazwa wlasna czy fragment kodu
+     * identyczny ze zrodlem w tlumaczeniu to poprawny wynik, nie awaria, wiec
+     * UpdateSegmentProcessor nigdy nie wola tej metody.
+     *
+     * @throws TranslationRejectedException
+     */
+    public function assertNotEchoed(string $source, string $translation): void
+    {
+        if (mb_strlen(trim($source)) > self::ECHO_THRESHOLD && trim($translation) === trim($source)) {
+            throw TranslationRejectedException::echoedSource();
         }
     }
 
@@ -99,12 +115,12 @@ final readonly class TranslationValidator
             }
 
             if ([] === $stack || array_pop($stack) !== $number) {
-                throw new TranslationRejectedException(\sprintf('Token %s closes out of order.', $number));
+                throw TranslationRejectedException::tokenIntegrity(\sprintf('Token %s closes out of order.', $number));
             }
         }
 
         if ([] !== $stack) {
-            throw new TranslationRejectedException(\sprintf('Token %s was never closed.', end($stack)));
+            throw TranslationRejectedException::tokenIntegrity(\sprintf('Token %s was never closed.', end($stack)));
         }
     }
 }

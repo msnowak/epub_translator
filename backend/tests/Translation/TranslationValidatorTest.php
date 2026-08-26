@@ -84,18 +84,42 @@ final class TranslationValidatorTest extends TestCase
         (new TranslationValidator())->validate('Line[1/]break', 'Wiersz[1]łamanie[/1]');
     }
 
-    public function testRejectsUntouchedLongText(): void
+    public function testAcceptsUntouchedLongTextByItself(): void
+    {
+        // Integralnosc danych nie zna pojecia echa - to jest wylacznie
+        // wiarygodnosc odpowiedzi modelu i sprawdza je assertNotEchoed().
+        // Reczna poprawka rowna zrodlu (np. sam URL) jest poprawnym zapisem.
+        $text = 'This paragraph is definitely longer than forty characters.';
+
+        (new TranslationValidator())->validate($text, $text);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    public function testAssertNotEchoedRejectsUntouchedLongText(): void
     {
         $text = 'This paragraph is definitely longer than forty characters.';
 
         $this->expectException(TranslationRejectedException::class);
 
-        (new TranslationValidator())->validate($text, $text);
+        (new TranslationValidator())->assertNotEchoed($text, $text);
     }
 
-    public function testAcceptsUntouchedShortText(): void
+    public function testAssertNotEchoedAcceptsUntouchedShortText(): void
     {
-        (new TranslationValidator())->validate('OK', 'OK');
+        // Ponizej progu identyczne wejscie i wyjscie sa wiarygodne: nazwa
+        // wlasna, data albo "OK" brzmia tak samo w obu jezykach.
+        (new TranslationValidator())->assertNotEchoed('OK', 'OK');
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    public function testAssertNotEchoedAcceptsDifferentTranslation(): void
+    {
+        (new TranslationValidator())->assertNotEchoed(
+            'This paragraph is definitely longer than forty characters.',
+            'Ten akapit jest zdecydowanie dluzszy niz czterdziesci znakow.',
+        );
 
         $this->expectNotToPerformAssertions();
     }

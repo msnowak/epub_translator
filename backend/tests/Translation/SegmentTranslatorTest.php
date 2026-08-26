@@ -118,6 +118,37 @@ final class SegmentTranslatorTest extends TestCase
         self::assertStringContainsString('Kapitan przemówił.', $request->userPrompt);
     }
 
+    public function testEchoedAnswerIsRejectedAndRetried(): void
+    {
+        $source = 'This paragraph is definitely longer than forty characters.';
+        $engine = new FakeTranslationEngine();
+        // Pierwsza odpowiedz to zrodlo oddane bez zmian, druga to prawdziwe tlumaczenie.
+        $engine->answerWith($source, 'Ten akapit jest zdecydowanie dluzszy niz czterdziesci znakow.');
+
+        $segment = $this->segment($source);
+
+        $this->translator($engine)->translate($segment, null);
+
+        self::assertSame(SegmentStatus::Translated, $segment->getStatus());
+        self::assertSame(2, $segment->getAttempts());
+        self::assertSame(2, $engine->callCount());
+    }
+
+    public function testEchoedAnswerExhaustsBudgetWhenModelNeverVaries(): void
+    {
+        $source = 'This paragraph is definitely longer than forty characters.';
+        $engine = new FakeTranslationEngine();
+        $engine->answerWith($source);
+
+        $segment = $this->segment($source);
+
+        $this->translator($engine, maxAttempts: 2)->translate($segment, null);
+
+        self::assertSame(SegmentStatus::Failed, $segment->getStatus());
+        self::assertSame(2, $segment->getAttempts());
+        self::assertNull($segment->getTranslatedText());
+    }
+
     public function testLogsWhyTheModelAnswerWasRejected(): void
     {
         $engine = new FakeTranslationEngine();

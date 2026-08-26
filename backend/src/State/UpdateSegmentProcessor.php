@@ -10,6 +10,7 @@ use App\Entity\Segment;
 use App\Entity\SegmentStatus;
 use App\Preview\SegmentPlaceholderExposer;
 use App\Translation\TranslationRejectedException;
+use App\Translation\TranslationRejectionReason;
 use App\Translation\TranslationValidator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -50,12 +51,16 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
 
         try {
             $this->validator->validate($data->getSourceText(), $translation);
-        } catch (TranslationRejectedException) {
-            // Techniczny powod zostaje w wyjatku; uzytkownikowi potrzebna jest
-            // wskazowka, co poprawic, nie nazwa zlamanej reguly.
-            throw new UnprocessableEntityHttpException(
-                'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał, w tej samej liczbie.',
-            );
+        } catch (TranslationRejectedException $exception) {
+            // Komunikat ma odpowiadac faktycznej przyczynie: "brakuje zetonow"
+            // przy pustym tlumaczeniu kieruje poszukiwania w zla strone.
+            // Reguly echa tu nie ma - validate() jej nie sprawdza, wiec
+            // TokenIntegrity jest jedyna realna przyczyna oprocz pustego tekstu.
+            throw new UnprocessableEntityHttpException(match ($exception->reason) {
+                TranslationRejectionReason::Empty => 'Podaj treść tłumaczenia.',
+                TranslationRejectionReason::TokenIntegrity, TranslationRejectionReason::Echo =>
+                    'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał, w tej samej liczbie.',
+            });
         }
 
         // Reczna poprawka jest ostateczna: automatyczne ponawianie nigdy jej
