@@ -19,11 +19,25 @@ export function scrollSegmentIntoView(document: Document, segmentId: string): vo
 }
 
 export function readSegmentId(target: EventTarget | null): string | null {
-  if (!(target instanceof Element)) {
+  if (null === target || !isElementLike(target)) {
     return null
   }
 
   return target.closest('[data-segment-id]')?.getAttribute('data-segment-id') ?? null
+}
+
+/**
+ * The clicked node comes from the iframe's document, a different realm than
+ * this module - Element in the frame's window is a different constructor
+ * object than Element here, so "target instanceof Element" is false always,
+ * not just sometimes. We check a capability (does it have closest?) instead
+ * of relying on constructor identity across realms. Do not "simplify" this
+ * back to instanceof; that is exactly the bug this guards against.
+ */
+function isElementLike(target: EventTarget): target is Element {
+  const candidate = target as { closest?: unknown }
+
+  return 'function' === typeof candidate.closest
 }
 
 function findBlock(document: Document, segmentId: string): Element | null {

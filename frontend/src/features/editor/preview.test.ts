@@ -29,4 +29,34 @@ describe('readSegmentId', () => {
   it('answers null outside any block', () => {
     expect(readSegmentId(documentWith('<p>x</p>').querySelector('p'))).toBeNull()
   })
+
+  it('finds the block for a node from another realm, like the preview iframe', () => {
+    // Budowanie dokumentu przez DOMParser (jak documentWith powyzej) zostaje
+    // w tym samym realmie co kod testu, wiec "instanceof Element" tam dziala
+    // i niczego by nie wykrylo. Prawdziwa granica realmow to osobny iframe:
+    // jego contentDocument ma wlasny konstruktor Element, rozny od tego z
+    // realmu rodzica - dokladnie sytuacja z przegladarki.
+    const frame = window.document.createElement('iframe')
+    window.document.body.append(frame)
+
+    try {
+      const inner = frame.contentDocument
+
+      if (null === inner) {
+        throw new Error('brak contentDocument ramki w tym srodowisku testowym')
+      }
+
+      inner.body.innerHTML = '<p data-segment-id="a">Tekst z <em id="inner">emfazą</em>.</p>'
+      const target = inner.querySelector('#inner')
+
+      // Dowod, ze granica realmow jest tu prawdziwa: gdyby target byl
+      // instancja Element z realmu rodzica, stara implementacja tez by
+      // przeszla i test niczego by nie dowodzil.
+      expect(target instanceof Element).toBe(false)
+
+      expect(readSegmentId(target)).toBe('a')
+    } finally {
+      frame.remove()
+    }
+  })
 })
