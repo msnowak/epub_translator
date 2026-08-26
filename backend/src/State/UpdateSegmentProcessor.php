@@ -52,15 +52,7 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
         try {
             $this->validator->validate($data->getSourceText(), $translation);
         } catch (TranslationRejectedException $exception) {
-            // Komunikat ma odpowiadac faktycznej przyczynie: "brakuje zetonow"
-            // przy pustym tlumaczeniu kieruje poszukiwania w zla strone.
-            // Reguly echa tu nie ma - validate() jej nie sprawdza, wiec
-            // TokenIntegrity jest jedyna realna przyczyna oprocz pustego tekstu.
-            throw new UnprocessableEntityHttpException(match ($exception->reason) {
-                TranslationRejectionReason::Empty => 'Podaj treść tłumaczenia.',
-                TranslationRejectionReason::TokenIntegrity, TranslationRejectionReason::Echo =>
-                    'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał, w tej samej liczbie.',
-            });
+            throw new UnprocessableEntityHttpException($this->detailFor($exception));
         }
 
         // Reczna poprawka jest ostateczna: automatyczne ponawianie nigdy jej
@@ -72,5 +64,26 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
         $this->exposer->expose($data);
 
         return $data;
+    }
+
+    /**
+     * Komunikat ma odpowiadac faktycznej przyczynie: "brakuje zetonow" przy
+     * pustym tlumaczeniu kieruje poszukiwania w zla strone.
+     */
+    private function detailFor(TranslationRejectedException $exception): string
+    {
+        return match ($exception->reason) {
+            TranslationRejectionReason::Empty => 'Podaj treść tłumaczenia.',
+            TranslationRejectionReason::TokenIntegrity => 'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał, w tej samej liczbie.',
+            // validate() nigdy nie zglasza echa - sprawdza je wylacznie
+            // assertNotEchoed(), ktorej ten procesor celowo nie wola. Gdyby
+            // kiedys ta galaz stala sie osiagalna, cichy komunikat o zetonach
+            // bylby klamstwem identycznym z tym, co naprawia to zadanie -
+            // lepiej glosno wybuchnac i zdradzic zlamany niezmiennik, niz
+            // cicho klamac uzytkownikowi.
+            TranslationRejectionReason::Echo => throw new \LogicException(
+                'TranslationRejectionReason::Echo must never reach UpdateSegmentProcessor: the echo rule is an engine-path check (see TranslationValidator::assertNotEchoed()), not a data-integrity failure a human edit can trigger.',
+            ),
+        };
     }
 }
