@@ -39,6 +39,11 @@ export function useRetranslation(chapterId: string) {
   // interwalu, gdy queryClient sie nie zmienil.
   const invalidateFailedList = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['segments', 'failed'] })
+    // Ponowione tlumaczenie zmienia tresc rozdzialu tak samo jak reczna
+    // poprawka w useSegmentEditor - ten sam chwyt po prefiksie klucza, z
+    // refetchType: 'none', zeby nie przeladowac ramki otwartej wlasnie teraz
+    // (patrz komentarz przy analogicznym wywolaniu w useSegmentEditor).
+    void queryClient.invalidateQueries({ queryKey: ['preview'], refetchType: 'none' })
   }, [queryClient])
 
   const mutation = useMutation({

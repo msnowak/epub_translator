@@ -127,6 +127,45 @@ describe('EditorPage', () => {
     expect(await screen.findByRole('button', { name: 'Wczytaj ponownie' })).toBeInTheDocument()
   })
 
+  it('fetches the chapter document once, even after leaving and returning to it', async () => {
+    // Powrot do rozdzialu 1 nie ma pobierac dokumentu drugi raz: bez
+    // staleTime: Infinity zapytanie najpierw oddaje cache (widoczne od razu),
+    // po czym natychmiast leci odswiezenie w tle - to ono migoczaco
+    // przeladowuje ramke (kazda zmiana srcDoc kaze jej wczytac sie od zera).
+    let ch1Requests = 0
+
+    server.use(
+      http.get(`${API}/api/projects/p/preview/ch-1`, () => {
+        ch1Requests += 1
+
+        return HttpResponse.text(
+          '<html><body><p data-segment-id="seg-1">Jakieś <em>słowo</em>.</p></body></html>',
+        )
+      }),
+      http.get(`${API}/api/chapters/ch-2/segments`, () => HttpResponse.json([])),
+      http.get(`${API}/api/projects/p/preview/ch-2`, () => HttpResponse.text('<html><body>Drugi.</body></html>')),
+    )
+
+    renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+    await waitFor(() => {
+      expect(ch1Requests).toBe(1)
+    })
+
+    await userEvent.click(screen.getByRole('link', { name: 'Rozdział 2' }))
+    await screen.findByText('Ten rozdział nie ma akapitów.')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Rozdział pierwszy' }))
+    await screen.findByText('A [1]word[/1].')
+
+    // Zapytanie w tle (gdyby wciaz istnialo) startuje asynchronicznie zaraz
+    // po zamontowaniu - dajemy mu okazje, zeby sie ujawnilo, zanim policzymy.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(ch1Requests).toBe(1)
+  })
+
   it('keeps only the failed paragraphs when asked to', async () => {
     renderEditor()
 

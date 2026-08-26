@@ -41,6 +41,13 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
       // wczesniej "failed", projektowa lista nieudanych akapitow musi to
       // zauwazyc, a nie trzymac stary blad.
       void queryClient.invalidateQueries({ queryKey: ['segments', 'failed'] })
+      // Podglad tego rozdzialu jest teraz nieaktualny wzgledem cache'u
+      // zapytania - ale zywy dokument w ramce juz ma ta zmiane (patrz
+      // patchPreview/onPreview), wiec odswiezenie ma zaczekac do nastepnego
+      // wejscia w rozdzial, a nie wyrywac dokument spod kursora teraz.
+      // refetchType: 'none' oznacza zapytanie jako nieaktualne bez
+      // natychmiastowego przeladowania aktywnej ramki.
+      void queryClient.invalidateQueries({ queryKey: ['preview'], refetchType: 'none' })
     },
     onError: (error: unknown) => {
       setState('error')

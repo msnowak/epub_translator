@@ -30,9 +30,20 @@ export function EditorPage() {
     queryKey: ['segments', chapterId],
     queryFn: () => listChapterSegments(chapterId),
   })
+  // Rozdzial nie zmienia sie sam z siebie, wiec nie ma powodu go odpytywac -
+  // staleTime: Infinity plus wylaczony refetchOnWindowFocus, inaczej powrot
+  // do juz odwiedzonego rozdzialu (albo powrot fokusu do karty) najpierw
+  // oddaje dokument z cache'u, po czym natychmiast leci odswiezenie w tle;
+  // kazda zmiana wartosci srcDoc przeladowuje ramke od zera, wiec podglad
+  // mruga i wczytuje sie dwa razy. Kod, ktory zmienia tresc rozdzialu
+  // (useSegmentEditor, useRetranslation), uniewaznia to zapytanie po
+  // prefiksie klucza, wiec swiezy dokument i tak trafia tu przy nastepnym
+  // wejsciu w rozdzial.
   const preview = useQuery({
     queryKey: ['preview', id, chapterId],
     queryFn: () => loadChapterPreview(id, chapterId),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
   })
   const retranslation = useRetranslation(chapterId)
 
