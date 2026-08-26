@@ -23,8 +23,10 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
           </Button>
         </div>
       </header>
-      <main className={`min-h-0 flex-1 ${wide ? 'px-6 py-4' : 'mx-auto max-w-4xl p-8'}`}>
-        <Outlet />
+      <main className="min-h-0 flex-1">
+        <div className={wide ? 'h-full px-6 py-4' : 'mx-auto max-w-4xl p-8'}>
+          <Outlet />
+        </div>
       </main>
     </div>
   )

@@ -26,15 +26,29 @@ function renderLayout(wide?: boolean) {
 }
 
 describe('AppLayout', () => {
-  it('constrains the default layout to a narrow centered column', () => {
+  it('centers the narrow layout in a wrapper inside main, not on main itself', () => {
     renderLayout()
 
-    expect(screen.getByRole('main')).toHaveClass('max-w-4xl')
+    const main = screen.getByRole('main')
+
+    // main must stay a plain flex item (min-h-0 flex-1) so it stretches to
+    // the row's full width; putting max-w-4xl on main itself makes it a flex
+    // item WITH auto cross-axis margins, which suppresses stretch and
+    // shrinks main down to its content width instead.
+    expect(main).toHaveClass('flex-1')
+    expect(main).not.toHaveClass('max-w-4xl')
+
+    const wrapper = main.querySelector('.max-w-4xl')
+    expect(wrapper).not.toBeNull()
+    expect(wrapper).not.toBe(main)
   })
 
-  it('lets the wide variant use the whole window width', () => {
+  it('lets the wide variant fill main with no max-width wrapper', () => {
     renderLayout(true)
 
-    expect(screen.getByRole('main')).not.toHaveClass('max-w-4xl')
+    const main = screen.getByRole('main')
+
+    expect(main).toHaveClass('flex-1')
+    expect(main.querySelector('.max-w-4xl')).toBeNull()
   })
 })
