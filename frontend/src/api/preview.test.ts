@@ -21,6 +21,21 @@ describe('absolutizeAssetUrls', () => {
     expect(html).toContain('href="#note-1"')
   })
 
+  it('rewrites the namespaced xlink:href on an EPUB 2 cover image', () => {
+    // EPUB 2 embeds its cover as SVG's <image xlink:href="…">. The qualified
+    // name is "xlink:href", not "href" - a selector or getAttribute keyed on
+    // the plain name misses it and the cover stays relative to the front's
+    // own origin (blank white iframe).
+    const html = absolutizeAssetUrls(
+      '<html><body><svg><image xlink:href="/api/projects/p/assets/cover.jpeg?t=x"></image></svg></body></html>',
+    )
+    const image = new DOMParser().parseFromString(html, 'text/html').querySelector('image')
+
+    expect(image?.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe(
+      `${API}/api/projects/p/assets/cover.jpeg?t=x`,
+    )
+  })
+
   it('leaves a detached book link alone', () => {
     const html = absolutizeAssetUrls('<html><body><a data-epub-href="ch2.xhtml">x</a></body></html>')
     // Sprawdzamy atrybut wprost, a nie podciag w html: "data-epub-href=..."
