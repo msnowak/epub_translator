@@ -9,19 +9,22 @@ interface Props {
   activeId: string | null
   // Zadanie przewiniecia listy do konkretnego akapitu, wystawiane przez
   // rodzica wylacznie dla aktywacji spoza listy (klikniecie w podgladzie,
-  // link "?akapit=") - patrz komentarz przy activate() w EditorPage.
-  scrollToId: string | null
+  // link "?akapit=") - patrz komentarz przy activate() w EditorPage. Token
+  // rosnie przy kazdym takim zadaniu, wiec klikniecie tego samego akapitu
+  // drugi raz z rzedu wciaz jest nowa wartoscia obiektu i efekt ponizej
+  // faktycznie sie uruchamia - sam string by tu nie wystarczyl.
+  scrollTo: { id: string; token: number } | null
   onPreview: (segmentId: string, html: string) => void
   onActivate: (segmentId: string) => void
   onRetranslate: (segmentId: string) => void
 }
 
-export function SegmentList({ segments, chapterId, activeId, scrollToId, onPreview, onActivate, onRetranslate }: Props) {
+export function SegmentList({ segments, chapterId, activeId, scrollTo, onPreview, onActivate, onRetranslate }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   // Czytany w efekcie przewijania ponizej, zeby nie trzeba bylo wpisywac
   // "segments" do jego zaleznosci - inaczej kazde przeliczenie widocznej
   // listy (np. przelaczenie filtra "tylko nieudane") tworzyloby nowa tablice
-  // i przewijalo od nowa, mimo ze scrollToId sie nie zmienil.
+  // i przewijalo od nowa, mimo ze scrollTo sie nie zmienil.
   const segmentsRef = useRef(segments)
   segmentsRef.current = segments
 
@@ -35,11 +38,11 @@ export function SegmentList({ segments, chapterId, activeId, scrollToId, onPrevi
   })
 
   useEffect(() => {
-    if (null === scrollToId) {
+    if (null === scrollTo) {
       return
     }
 
-    const index = segmentsRef.current.findIndex((segment) => segment.id === scrollToId)
+    const index = segmentsRef.current.findIndex((segment) => segment.id === scrollTo.id)
 
     // Filtr "tylko nieudane" potrafi wywalic wlasnie ten akapit z widoku -
     // nie ma wtedy do czego przewijac (patrz punkt 4 w opisie zadania).
@@ -51,7 +54,7 @@ export function SegmentList({ segments, chapterId, activeId, scrollToId, onPrevi
     // ogole nie istniec w DOM-ie - scrollToIndex to jedyny sposob, zeby go
     // tam sprowadzic; szukanie elementu w dokumencie by tu nie zadzialalo.
     virtualizer.scrollToIndex(index, { align: 'center' })
-  }, [scrollToId, virtualizer])
+  }, [scrollTo, virtualizer])
 
   return (
     <div ref={scrollRef} className="h-full overflow-y-auto">

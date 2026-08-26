@@ -92,13 +92,21 @@ export function EditorPage() {
   // podgladzie albo link "?akapit=" (lista wlasnie nie ma tego wiersza w
   // oknie widocznosci i to ja trzeba przewinac). "source" czyni ten podzial
   // jawnym w miejscu wywolania, zamiast zgadywac go po tym, kto zawolal.
-  const [scrollToId, setScrollToId] = useState<string | null>(null)
+  //
+  // scrollTo nosi licznik ("token") obok id: klikniecie tego samego akapitu
+  // drugi raz z rzedu (np. po tym jak uzytkownik recznie przewinal liste
+  // gdzie indziej) dawaloby ten sam string co poprzednio, a React pomija
+  // rerender przy setState identyczna wartoscia prymitywna - bez tokena
+  // efekt przewijajacy w SegmentList w ogole by sie nie uruchomil.
+  const [scrollTo, setScrollTo] = useState<{ id: string; token: number } | null>(null)
+  const scrollTokenRef = useRef(0)
 
   const activate = useCallback((segmentId: string, source: 'row' | 'external') => {
     setActiveId(segmentId)
 
     if ('external' === source) {
-      setScrollToId(segmentId)
+      scrollTokenRef.current += 1
+      setScrollTo({ id: segmentId, token: scrollTokenRef.current })
     }
 
     const document = frameRef.current?.contentDocument ?? null
@@ -181,7 +189,7 @@ export function EditorPage() {
             segments={visible}
             chapterId={chapterId}
             activeId={activeId}
-            scrollToId={scrollToId}
+            scrollTo={scrollTo}
             onPreview={patchPreview}
             onActivate={activateFromRow}
             onRetranslate={retranslation.retranslate}

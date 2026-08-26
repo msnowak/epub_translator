@@ -38,7 +38,11 @@ function segments(count: number): Segment[] {
   }))
 }
 
-function renderList(items: Segment[], onActivate = vi.fn(), scrollToId: string | null = null) {
+function renderList(
+  items: Segment[],
+  onActivate = vi.fn(),
+  scrollTo: { id: string; token: number } | null = null,
+) {
   const client = new QueryClient()
 
   function Wrapper({ children }: { children: ReactNode }) {
@@ -50,7 +54,7 @@ function renderList(items: Segment[], onActivate = vi.fn(), scrollToId: string |
       segments={items}
       chapterId="ch-1"
       activeId={null}
-      scrollToId={scrollToId}
+      scrollTo={scrollTo}
       onPreview={vi.fn()}
       onActivate={onActivate}
       onRetranslate={vi.fn()}
@@ -92,14 +96,39 @@ describe('SegmentList', () => {
   it('scrolls to an off-screen paragraph when asked to from outside the list', () => {
     // seg-150 nie siedzi w oknie wyrenderowanych wierszy przy 200 akapitach -
     // to wlasnie przypadek, ktorego szukanie w dokumencie nie potrafi znalezc.
-    renderList(segments(200), vi.fn(), 'seg-150')
+    renderList(segments(200), vi.fn(), { id: 'seg-150', token: 1 })
 
     expect(scrollToIndexSpy()).toHaveBeenCalledWith(150, { align: 'center' })
   })
 
   it('does not scroll when the requested paragraph is not in the (filtered) list', () => {
-    renderList(segments(3), vi.fn(), 'seg-not-visible')
+    renderList(segments(3), vi.fn(), { id: 'seg-not-visible', token: 1 })
 
     expect(scrollToIndexSpy()).not.toHaveBeenCalled()
+  })
+
+  it('scrolls again when the same paragraph is requested a second time', () => {
+    // Klikniecie tego samego akapitu drugi raz z rzedu (np. po tym jak
+    // uzytkownik sam odsunal liste gdzie indziej) niesie ten sam id - bez
+    // rosnacego tokena setState identycznym stringiem bylby przez Reacta
+    // pominiety i efekt przewijajacy w ogole by sie nie uruchomil ponownie.
+    const { rerender } = renderList(segments(200), vi.fn(), { id: 'seg-150', token: 1 })
+
+    expect(scrollToIndexSpy()).toHaveBeenNthCalledWith(1, 150, { align: 'center' })
+
+    rerender(
+      <SegmentList
+        segments={segments(200)}
+        chapterId="ch-1"
+        activeId={null}
+        scrollTo={{ id: 'seg-150', token: 2 }}
+        onPreview={vi.fn()}
+        onActivate={vi.fn()}
+        onRetranslate={vi.fn()}
+      />,
+    )
+
+    expect(scrollToIndexSpy()).toHaveBeenNthCalledWith(2, 150, { align: 'center' })
+    expect(scrollToIndexSpy()).toHaveBeenCalledTimes(2)
   })
 })

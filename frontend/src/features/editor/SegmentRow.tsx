@@ -25,10 +25,7 @@ export function SegmentRow({ segment, chapterId, active, onPreview, onActivate, 
   const failed = 'failed' === segment.status
 
   return (
-    <div
-      className={`grid grid-cols-2 gap-4 border-b p-4 ${active ? 'bg-neutral-50' : ''}`}
-      data-segment-row={segment.id}
-    >
+    <div className={`grid grid-cols-2 gap-4 border-b p-4 ${active ? 'bg-neutral-50' : ''}`}>
       <p className="text-sm text-neutral-700">{segment.sourceText}</p>
 
       <div className="flex flex-col gap-1">
