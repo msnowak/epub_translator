@@ -4,8 +4,24 @@ import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Segment } from '../../api/types'
+import { captureScrollToIndex, resetScrollToIndexSpy, scrollToIndexSpy } from '../../test/segmentListVirtualizer'
 import { stubLayoutForVirtualization } from '../../test/virtualization'
 import { SegmentList } from './SegmentList'
+
+vi.mock('@tanstack/react-virtual', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-virtual')>()
+
+  return {
+    ...actual,
+    useVirtualizer: (options: Parameters<typeof actual.useVirtualizer>[0]) => {
+      const instance = actual.useVirtualizer(options)
+
+      captureScrollToIndex(instance)
+
+      return instance
+    },
+  }
+})
 
 function segments(count: number): Segment[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -22,7 +38,7 @@ function segments(count: number): Segment[] {
   }))
 }
 
-function renderList(items: Segment[], onActivate = vi.fn()) {
+function renderList(items: Segment[], onActivate = vi.fn(), scrollToId: string | null = null) {
   const client = new QueryClient()
 
   function Wrapper({ children }: { children: ReactNode }) {
@@ -34,6 +50,7 @@ function renderList(items: Segment[], onActivate = vi.fn()) {
       segments={items}
       chapterId="ch-1"
       activeId={null}
+      scrollToId={scrollToId}
       onPreview={vi.fn()}
       onActivate={onActivate}
       onRetranslate={vi.fn()}
@@ -45,6 +62,7 @@ function renderList(items: Segment[], onActivate = vi.fn()) {
 describe('SegmentList', () => {
   beforeEach(() => {
     stubLayoutForVirtualization()
+    resetScrollToIndexSpy()
   })
 
   it('shows the source next to its translation', () => {
@@ -69,5 +87,19 @@ describe('SegmentList', () => {
     await userEvent.click(screen.getByDisplayValue('Akapit 1.'))
 
     expect(onActivate).toHaveBeenCalledWith('seg-1')
+  })
+
+  it('scrolls to an off-screen paragraph when asked to from outside the list', () => {
+    // seg-150 nie siedzi w oknie wyrenderowanych wierszy przy 200 akapitach -
+    // to wlasnie przypadek, ktorego szukanie w dokumencie nie potrafi znalezc.
+    renderList(segments(200), vi.fn(), 'seg-150')
+
+    expect(scrollToIndexSpy()).toHaveBeenCalledWith(150, { align: 'center' })
+  })
+
+  it('does not scroll when the requested paragraph is not in the (filtered) list', () => {
+    renderList(segments(3), vi.fn(), 'seg-not-visible')
+
+    expect(scrollToIndexSpy()).not.toHaveBeenCalled()
   })
 })

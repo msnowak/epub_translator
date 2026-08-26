@@ -2,12 +2,28 @@ import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setAccessToken } from '../../api/client'
+import { captureScrollToIndex, resetScrollToIndexSpy, scrollToIndexSpy } from '../../test/segmentListVirtualizer'
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { server } from '../../test/server'
 import { stubLayoutForVirtualization } from '../../test/virtualization'
 import { EditorPage } from './EditorPage'
+
+vi.mock('@tanstack/react-virtual', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-virtual')>()
+
+  return {
+    ...actual,
+    useVirtualizer: (options: Parameters<typeof actual.useVirtualizer>[0]) => {
+      const instance = actual.useVirtualizer(options)
+
+      captureScrollToIndex(instance)
+
+      return instance
+    },
+  }
+})
 
 const API = 'http://localhost:8000'
 
@@ -60,12 +76,12 @@ function handlers() {
   ]
 }
 
-function renderEditor() {
+function renderEditor(route = '/projekty/p/rozdzialy/ch-1') {
   return renderWithProviders(
     <Routes>
       <Route path="/projekty/:id/rozdzialy/:chapterId" element={<EditorPage />} />
     </Routes>,
-    { route: '/projekty/p/rozdzialy/ch-1' },
+    { route },
   )
 }
 
@@ -73,6 +89,7 @@ describe('EditorPage', () => {
   beforeEach(() => {
     setAccessToken('token')
     stubLayoutForVirtualization()
+    resetScrollToIndexSpy()
     server.use(...handlers())
   })
 
@@ -369,5 +386,65 @@ describe('EditorPage', () => {
       expect(screen.queryByText('A [1]word[/1].')).not.toBeInTheDocument()
     })
     expect(screen.getByText('W tym rozdziale nie ma nieudanych akapitów.')).toBeInTheDocument()
+  })
+
+  it('scrolls the paragraph list to the row a preview click landed on', async () => {
+    renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+
+    const frame = screen.getByTitle('Podgląd rozdziału') as HTMLIFrameElement
+    const inner = frame.contentDocument
+
+    if (null === inner) {
+      throw new Error('brak contentDocument ramki w tym srodowisku testowym')
+    }
+
+    // jsdom nie wczytuje tresci srcdoc do contentDocument - patrz komentarz w
+    // teście "patches the open preview..." powyżej dla wyjaśnienia. Odtwarzamy
+    // tu recznie wezel, ktory PreviewPane sluchalby na kliknieciu.
+    inner.body.innerHTML = '<p data-segment-id="seg-1">Jakieś <em>słowo</em>.</p>'
+
+    // jsdom nie implementuje scrollIntoView w zadnym realmie (patrz test
+    // "lets a focused paragraph..." powyzej) - activate() je woła zawsze,
+    // wiec bez tej zaslepki klikniecie rzucaloby wyjatkiem w nasluchu.
+    if (null !== inner.defaultView) {
+      inner.defaultView.Element.prototype.scrollIntoView = () => {}
+    }
+
+    const target = inner.querySelector('[data-segment-id="seg-1"]')
+
+    if (null === target) {
+      throw new Error('brak wezla akapitu w kontencie testowym ramki')
+    }
+
+    // PreviewPane podpina nasluch klikniec dopiero w onLoad ramki - w jsdom
+    // to zdarzenie ladowania srcdoc jest asynchroniczne, wiec czekamy, az
+    // klikniecie faktycznie dotrze do activate().
+    await waitFor(() => {
+      target.dispatchEvent(new inner.defaultView!.MouseEvent('click', { bubbles: true }))
+      expect(scrollToIndexSpy()).toHaveBeenCalledWith(0, { align: 'center' })
+    })
+  })
+
+  it('does not scroll the paragraph list when a row merely receives focus', async () => {
+    renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+    fireEvent.focus(screen.getByLabelText('Tłumaczenie akapitu 1'))
+
+    // Nie ma tu na co czekac asynchronicznie - focus dziala synchronicznie -
+    // wiec sprawdzamy wprost, ze przewijanie sie nie zdarzylo.
+    expect(scrollToIndexSpy()).not.toHaveBeenCalled()
+  })
+
+  it('scrolls to the requested paragraph when opened via ?akapit=', async () => {
+    renderEditor('/projekty/p/rozdzialy/ch-1?akapit=seg-1')
+
+    await screen.findByText('A [1]word[/1].')
+
+    await waitFor(() => {
+      expect(scrollToIndexSpy()).toHaveBeenCalledWith(0, { align: 'center' })
+    })
   })
 })

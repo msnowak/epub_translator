@@ -85,8 +85,21 @@ export function EditorPage() {
 
   const retranslation = useRetranslation(chapterId, retranslationPreview)
 
-  const activate = useCallback((segmentId: string) => {
+  // Aktywacja przychodzi z dwoch bardzo roznych miejsc: fokus na polu
+  // tekstowym wiersza (uzytkownik juz na niego patrzy - przewijanie listy
+  // byloby co najmniej bezcelowe, a w trakcie pisania wrecz przeszkadzalo -
+  // patrz punkt 2 zadania) oraz zdarzenia spoza listy, klikniecie w
+  // podgladzie albo link "?akapit=" (lista wlasnie nie ma tego wiersza w
+  // oknie widocznosci i to ja trzeba przewinac). "source" czyni ten podzial
+  // jawnym w miejscu wywolania, zamiast zgadywac go po tym, kto zawolal.
+  const [scrollToId, setScrollToId] = useState<string | null>(null)
+
+  const activate = useCallback((segmentId: string, source: 'row' | 'external') => {
     setActiveId(segmentId)
+
+    if ('external' === source) {
+      setScrollToId(segmentId)
+    }
 
     const document = frameRef.current?.contentDocument ?? null
 
@@ -95,16 +108,16 @@ export function EditorPage() {
     }
   }, [])
 
+  const activateFromRow = useCallback((segmentId: string) => activate(segmentId, 'row'), [activate])
+  const activateFromPreview = useCallback((segmentId: string) => activate(segmentId, 'external'), [activate])
+
   useEffect(() => {
     if (jumped.current || null === requested || undefined === segments.data) {
       return
     }
 
     jumped.current = true
-    activate(requested)
-    // Wirtualizowana lista nie ma tego wiersza w DOM-ie, dopoki do niego nie
-    // dojedzie - dlatego przewijamy przez atrybut, a nie przez ref.
-    document.querySelector(`[data-segment-row="${requested}"]`)?.scrollIntoView({ block: 'center' })
+    activate(requested, 'external')
   }, [activate, requested, segments.data])
 
   const visible = useMemo(
@@ -168,15 +181,16 @@ export function EditorPage() {
             segments={visible}
             chapterId={chapterId}
             activeId={activeId}
+            scrollToId={scrollToId}
             onPreview={patchPreview}
-            onActivate={activate}
+            onActivate={activateFromRow}
             onRetranslate={retranslation.retranslate}
           />
         )}
       </section>
 
       <section className="h-full overflow-hidden border-l">
-        <PreviewPane html={preview.data ?? null} frameRef={frameRef} onSegmentClick={activate} />
+        <PreviewPane html={preview.data ?? null} frameRef={frameRef} onSegmentClick={activateFromPreview} />
       </section>
     </div>
   )
