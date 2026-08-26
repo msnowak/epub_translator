@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { Route, Routes } from 'react-router-dom'
@@ -165,6 +165,63 @@ describe('EditorPage', () => {
 
     expect(ch1Requests).toBe(1)
   })
+
+  it('does not reload the open preview out from under an in-progress edit', async () => {
+    // Zapis akapitu uniewaznia zapytanie podgladu (patrz useSegmentEditor),
+    // ale ramka jest wlasnie otwarta na tym rozdziale - jesli uniewaznienie
+    // wyzwoli natychmiastowe odswiezenie aktywnego zapytania, dokument
+    // zostanie wyrwany spod kursora w trakcie pisania. To ma nie nastapic.
+    let ch1Requests = 0
+
+    server.use(
+      http.get(`${API}/api/projects/p/preview/ch-1`, () => {
+        ch1Requests += 1
+
+        return HttpResponse.text(
+          '<html><body><p data-segment-id="seg-1">Jakieś <em>słowo</em>.</p></body></html>',
+        )
+      }),
+      http.patch(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json({
+          id: 'seg-1',
+          position: 0,
+          nodeIndex: 0,
+          subIndex: 0,
+          sourceText: 'A [1]word[/1].',
+          translatedText: 'Nowe [1]słowo[/1].',
+          status: 'edited',
+          errorMessage: null,
+          previewPlaceholders: { '1': '<em>' },
+          chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
+        }),
+      ),
+    )
+
+    renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+    await waitFor(() => {
+      expect(ch1Requests).toBe(1)
+    })
+
+    // fireEvent, nie userEvent.type: nawiasy kwadratowe w tokenach maja
+    // specjalne znaczenie w skladni userEvent (jak "{enter}") i zostalyby
+    // zle zinterpretowane, gdyby wpisywac to znak po znaku.
+    const field = screen.getByLabelText('Tłumaczenie akapitu 1')
+    fireEvent.change(field, { target: { value: 'Nowe [1]słowo[/1].' } })
+
+    await waitFor(
+      () => {
+        expect(screen.getByText('Zapisano')).toBeInTheDocument()
+      },
+      { timeout: 5000 },
+    )
+
+    // Zapis juz sie powiodl (a wiec i uniewaznienie zapytania podgladu tez);
+    // zapytanie podgladu ma zostac tylko oznaczone jako nieaktualne, a nie
+    // odswiezone teraz - stad ta sama, jedna liczba co przed edycja.
+    expect(ch1Requests).toBe(1)
+  }, 10000)
 
   it('keeps only the failed paragraphs when asked to', async () => {
     renderEditor()
