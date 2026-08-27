@@ -447,4 +447,72 @@ describe('EditorPage', () => {
       expect(scrollToIndexSpy()).toHaveBeenCalledWith(0, { align: 'center' })
     })
   })
+
+  it('reloads both the paragraph list and the preview from the banner button', async () => {
+    // Obie kolumny czytaja ten sam rozdzial - klikniecie "Wczytaj ponownie" ma
+    // odswiezyc obie, nie tylko liste akapitow (patrz przeglad stage 7,
+    // finding 4).
+    let segmentRequests = 0
+    let previewRequests = 0
+
+    server.use(
+      http.get(`${API}/api/projects/p`, () =>
+        HttpResponse.json({
+          id: 'p',
+          title: 'Testowa książka',
+          sourceLanguage: 'en',
+          targetLanguage: 'pl',
+          ollamaModel: 'gemma4:12b',
+          customPrompt: null,
+          status: 'translating',
+          originalFilename: 'book.epub',
+          errorMessage: null,
+          createdAt: '2026-08-24T10:00:00+00:00',
+          updatedAt: '2026-08-24T10:00:00+00:00',
+          segmentCounts: { translated: 1, pending: 1 },
+          totalSegments: 2,
+        }),
+      ),
+      http.get(`${API}/api/chapters/ch-1/segments`, () => {
+        segmentRequests += 1
+
+        return HttpResponse.json([
+          {
+            id: 'seg-1',
+            position: 0,
+            nodeIndex: 0,
+            subIndex: 0,
+            sourceText: 'A [1]word[/1].',
+            translatedText: 'Jakieś [1]słowo[/1].',
+            status: 'translated',
+            errorMessage: null,
+            previewPlaceholders: { '1': '<em>' },
+            chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
+          },
+        ])
+      }),
+      http.get(`${API}/api/projects/p/preview/ch-1`, () => {
+        previewRequests += 1
+
+        return HttpResponse.text(
+          '<html><body><p data-segment-id="seg-1">Jakieś <em>słowo</em>.</p></body></html>',
+        )
+      }),
+    )
+
+    renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+    await waitFor(() => {
+      expect(segmentRequests).toBe(1)
+      expect(previewRequests).toBe(1)
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Wczytaj ponownie' }))
+
+    await waitFor(() => {
+      expect(segmentRequests).toBe(2)
+      expect(previewRequests).toBe(2)
+    })
+  })
 })

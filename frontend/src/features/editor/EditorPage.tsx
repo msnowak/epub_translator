@@ -163,7 +163,19 @@ export function EditorPage() {
           {'translating' === project.data?.status ? (
             <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-sm">
               <span>Tłumaczenie tej książki trwa — nowe akapity nie pojawią się same.</span>
-              <Button size="sm" variant="outline" onClick={() => void segments.refetch()}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  // Obie kolumny czytaja ten sam rozdzial - odswiezenie
+                  // samej listy akapitow zostawia podglad (staleTime:
+                  // Infinity, refetchOnWindowFocus: false) na starej,
+                  // nieprzetlumaczonej tresci, a to wlasnie trzeciej kolumnie
+                  // ma nie wolno sie zdarzyc.
+                  void segments.refetch()
+                  void preview.refetch()
+                }}
+              >
                 Wczytaj ponownie
               </Button>
             </div>
