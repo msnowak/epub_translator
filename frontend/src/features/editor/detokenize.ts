@@ -33,9 +33,29 @@ export function detokenize(text: string, placeholders: Record<string, string>): 
   return result + escapeText(text.slice(offset))
 }
 
-/** The tokens a text carries, order-independent. */
+/**
+ * The tokens a text carries, as the numbers TranslationValidator::validate()
+ * would see - a set of token numbers with their kind ("void" or "paired"),
+ * ported from its tokenKinds(). Deliberately NOT the multiset of raw matches:
+ * the backend keys its map by number, so a repeated token (`[1]a[/1] b [1]c
+ * [/1]`) is one entry, not two, and this mirrors that rather than treating
+ * repetition as a mismatch. Nesting/closing order is left to the backend's
+ * assertWellNested() - a translation this signature waves through can still
+ * come back 422, and that is the intended trade-off (see the stage 7 review).
+ */
 export function tokenSignature(text: string): string {
-  return [...(text.match(/\[\/?\d+\/?\]/g) ?? [])].sort().join('')
+  const kinds: Record<string, 'void' | 'paired'> = {}
+
+  TOKEN.lastIndex = 0
+
+  for (let match = TOKEN.exec(text); null !== match; match = TOKEN.exec(text)) {
+    kinds[match[2]] = '' === match[3] ? 'paired' : 'void'
+  }
+
+  return Object.keys(kinds)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((number) => `${number}:${kinds[number]}`)
+    .join(',')
 }
 
 function tagName(openingMarkup: string): string {

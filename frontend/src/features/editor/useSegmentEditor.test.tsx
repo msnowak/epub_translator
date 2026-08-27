@@ -107,24 +107,33 @@ describe('useSegmentEditor', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['segments', 'failed'] })
   })
 
-  it('does not ask the backend to reject a half-typed token', async () => {
+  it('blocks a save when a whole token number disappears mid-edit', async () => {
+    // tokenSignature() jest teraz nieczuly na liczbe wystapien (patrz nizej),
+    // wiec usuniecie jednego z dwoch wystapien tego samego numeru juz nie
+    // blokuje - to swiadomy kompromis (patrz detokenize.test.ts). Zniknieciu
+    // calego numeru zetonu wciaz ma zapobiegac przed wyslaniem do backendu.
     const saved: string[] = []
+    const twoTokenSegment: Segment = {
+      ...segment,
+      sourceText: 'A [1]big[/1] [2]red[/2] house.',
+      translatedText: 'Duży [1]czerwony[/1] [2]dom[/2].',
+    }
 
     server.use(
       http.patch(`${API}/api/segments/seg-1`, async ({ request }) => {
         saved.push(await request.text())
 
-        return HttpResponse.json(segment)
+        return HttpResponse.json(twoTokenSegment)
       }),
     )
 
     const { result } = renderHook(
-      () => useSegmentEditor({ segment, chapterId: 'ch-1', onPreview: vi.fn() }),
+      () => useSegmentEditor({ segment: twoTokenSegment, chapterId: 'ch-1', onPreview: vi.fn() }),
       { wrapper },
     )
 
     act(() => {
-      result.current.change('Jakieś słowo[/1].')
+      result.current.change('Duży czerwony [2]dom[/2].')
     })
 
     await act(async () => {
@@ -134,6 +143,40 @@ describe('useSegmentEditor', () => {
     expect(saved).toHaveLength(0)
     expect(result.current.state).toBe('blocked')
     expect(result.current.message).toContain('znaczniki')
+  })
+
+  it('does not block a translation that repeats one token a different number of times than the source', async () => {
+    // TranslationValidator::tokenKinds() (backend) klucz'uje po numerze
+    // zetonu, nie po liczbie wystapien - ten sam numer moze powtorzyc sie
+    // inna ilosc razy niz w zrodle i backend to zaakceptuje. Przewodnik po
+    // stronie przegladarki ma dawac ten sam wynik, a nie blokowac zapis,
+    // ktory backend by przyjal (patrz przeglad stage 7, finding 3).
+    const saved: string[] = []
+    const repeatSegment: Segment = { ...segment, sourceText: 'The [1]big red[/1] house.' }
+
+    server.use(
+      http.patch(`${API}/api/segments/seg-1`, async ({ request }) => {
+        saved.push(await request.text())
+
+        return HttpResponse.json({ ...repeatSegment, translatedText: '[1]Duży[/1] czerwony [1]dom[/1].', status: 'edited' })
+      }),
+    )
+
+    const { result } = renderHook(
+      () => useSegmentEditor({ segment: repeatSegment, chapterId: 'ch-1', onPreview: vi.fn() }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.change('[1]Duży[/1] czerwony [1]dom[/1].')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+
+    expect(saved).toEqual(['{"translatedText":"[1]Duży[/1] czerwony [1]dom[/1]."}'])
+    expect(result.current.state).toBe('saved')
   })
 
   it('shows what the backend said when it refuses the save', async () => {

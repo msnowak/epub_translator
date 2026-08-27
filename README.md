@@ -108,13 +108,19 @@ Editing a paragraph's translation drives two independent debounces, not one:
   that save fails, there is no row left to show the error on, so it surfaces
   as a banner at the top of the chapter instead.
 
-A translation that removes or unbalances a formatting token (deleting `[/1]`,
-for instance) never reaches the server: the row detects the mismatch, shows a
-validation message, and blocks the save entirely until the token count once
-again matches the source paragraph. This is the same rule
-`TranslationValidator` enforces server-side for machine translations and for
-retranslation - the editor just refuses the request before it is sent, rather
-than letting the backend reject it.
+A translation that drops a token number or invents one that is not in the
+source never reaches the server: the row detects the mismatch, shows a
+validation message, and blocks the save until the same set of token numbers
+(and their void/paired kind) is back. This mirrors `TranslationValidator`'s
+own `tokenKinds()` check server-side, deliberately down to its blind spot: it
+is keyed by token number, not by how many times a number repeats, so a
+translation that repeats one token a different number of times than the
+source passes this guard exactly as it passes the backend. Nesting and
+closing order (`[/1]` before its `[1]`, or a `[1]` that never closes) is a
+separate rule the backend alone enforces (`assertWellNested()`) - the editor
+does not pre-check it, so that class of mistake still reaches
+`PATCH /api/segments/{id}` and comes back as an ordinary 422 with the
+backend's message, rather than being blocked client-side.
 
 The live preview is an approximation, not a second copy of the export
 pipeline, and that is true even before any edit: it exists only between an

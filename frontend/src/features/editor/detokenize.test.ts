@@ -36,11 +36,32 @@ describe('tokenSignature', () => {
     expect(tokenSignature('[1]a[/1][2]b[/2]')).toBe(tokenSignature('[2]b[/2][1]a[/1]'))
   })
 
-  it('differs when a token is missing', () => {
-    expect(tokenSignature('[1]a[/1]')).not.toBe(tokenSignature('[1]a'))
-  })
-
   it('ignores the text around the tokens', () => {
     expect(tokenSignature('Source [1]here[/1].')).toBe(tokenSignature('Tłumaczenie [1]tutaj[/1]!'))
+  })
+
+  it('differs when a token number is missing entirely', () => {
+    expect(tokenSignature('[1]a[/1][2]b[/2]')).not.toBe(tokenSignature('[1]a[/1]'))
+  })
+
+  it('differs when a token changes kind between void and paired', () => {
+    expect(tokenSignature('[1]a[/1]')).not.toBe(tokenSignature('a[1/]'))
+  })
+
+  it('matches when one token number repeats a different number of times, like TranslationValidator::tokenKinds()', () => {
+    // Backend przypadek z przegladu stage 7: TranslationValidator klucz'uje
+    // mape po numerze zetonu, nie po liczbie wystapien, wiec ten sam numer
+    // moze powtorzyc sie inna ilosc razy niz w zrodle i backend to
+    // zaakceptuje. Przewodnik po stronie przegladarki ma dawac ten sam wynik,
+    // zamiast blokowac zapis, ktorego backend by przyjal.
+    expect(tokenSignature('The [1]big red[/1] house')).toBe(tokenSignature('[1]Duży[/1] czerwony [1]dom[/1]'))
+  })
+
+  it('does not catch an unclosed token - that is assertWellNested(), left to the backend', () => {
+    // "[1]a" niesie sam otwierajacy zeton, bez zamykajacego - assertWellNested()
+    // po stronie backendu i tak to odrzuci (stos nigdy sie nie domyka), wiec
+    // przewodnik nie musi sam wykrywac zle zagniezdzenia; ma tylko nie byc
+    // bardziej restrykcyjny niz sama integralnosc zetonow.
+    expect(tokenSignature('[1]a[/1]')).toBe(tokenSignature('[1]a'))
   })
 })
