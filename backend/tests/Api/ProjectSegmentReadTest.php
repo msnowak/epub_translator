@@ -97,6 +97,29 @@ final class ProjectSegmentReadTest extends ApiTestCase
         self::assertSame('failed', $payload[0]['status']);
     }
 
+    public function testMoreThanThirtyFailedParagraphsAllComeBackInOneResponse(): void
+    {
+        // API Platform pagina 30 wynikow domyslnie; ta kolekcja jest jedynym
+        // ekranem, ktory pokazuje nieudane akapity, wiec obciecie byloby
+        // niewidoczne dla uzytkownika - patrz komentarz przy paginationEnabled
+        // w Segment.php.
+        $owner = $this->createUser();
+        $project = $this->bookWithManyFailedSegments($owner, 35);
+
+        $this->request(
+            'GET',
+            '/api/projects/'.$project->getId().'/segments?status=failed',
+            token: $this->authenticate($owner),
+        );
+
+        self::assertResponseIsSuccessful();
+
+        /** @var list<array<string, mixed>> $payload */
+        $payload = $this->payload();
+
+        self::assertCount(35, $payload);
+    }
+
     public function testStrangerGetsNotFound(): void
     {
         $owner = $this->createUser('owner@example.com');
@@ -129,6 +152,26 @@ final class ProjectSegmentReadTest extends ApiTestCase
             $bad->setStatus(SegmentStatus::Failed);
             $bad->setErrorMessage('Model nie odpowiedział.');
             $entityManager->persist($bad);
+        }
+
+        $entityManager->flush();
+
+        return $project;
+    }
+
+    private function bookWithManyFailedSegments(User $owner, int $count): Project
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $project = ProjectFactory::create($entityManager, $owner);
+
+        $chapter = new Chapter($project, 0, 'OEBPS/ch1.xhtml', 'Rozdział pierwszy');
+        $entityManager->persist($chapter);
+
+        for ($position = 0; $position < $count; ++$position) {
+            $segment = new Segment($chapter, $position, $position, 0, \sprintf('Broken %d.', $position), []);
+            $segment->setStatus(SegmentStatus::Failed);
+            $segment->setErrorMessage('Model nie odpowiedział.');
+            $entityManager->persist($segment);
         }
 
         $entityManager->flush();

@@ -50,6 +50,12 @@ use Symfony\Component\Uid\Uuid;
             // Position liczy sie od zera w kazdym rozdziale, wiec bez rozdzialu
             // w kluczu sortowania akapity roznych rozdzialow by sie przeplotly.
             order: ['chapter.spineOrder' => 'ASC', 'position' => 'ASC'],
+            // Ta kolekcja sluzy wylacznie liscie nieudanych akapitow, a ta jest
+            // ograniczona z natury ksiazka - tak samo jak kolekcja rozdzialu
+            // wyzej. Bez tego domyslny limit API Platform (30) obcinalby liste
+            // po cichu: Accept: application/json oddaje gola tablice, wiec front
+            // nie mialby nawet jak zobaczyc, ze cos uciete.
+            paginationEnabled: false,
             provider: ProjectSegmentCollectionProvider::class,
         ),
         new Get(
