@@ -178,26 +178,36 @@ export function useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange 
         clearTimeout(previewTimer.current)
       }
 
-      if (null === saveTimer.current) {
-        return
+      if (null !== saveTimer.current) {
+        clearTimeout(saveTimer.current)
+
+        // Wyjscie z rozdzialu nie moze zjesc zmiany czekajacej w debouncie.
+        if (dirty.current) {
+          // Ta sama mutacja co przy zwyklym zapisie (nie goly fetch): queryClient
+          // przezyje odmontowanie tego wiersza, wiec onSuccess/onError powyzej i
+          // tak zapisza wynik tam, gdzie kod spoza tego komponentu moze go jeszcze
+          // zobaczyc - cache przy sukcesie, kanal bledu przy porazce. keepalive:
+          // true trzyma zadanie przy zyciu, gdyby to bylo odejscie z calej karty,
+          // nie tylko odmontowanie wiersza przez wirtualizacje. Ten sam mutateRef
+          // (po odmontowaniu mounted.current jest juz false) zaraportuje wynik i
+          // wtedy tez wyczysci dirtyIdsRef ponizej - tu nie ma po co robic tego
+          // dwa razy.
+          mutateRef.current({ text: latest.current, keepalive: true })
+
+          return
+        }
       }
 
-      clearTimeout(saveTimer.current)
-
-      // Wyjscie z rozdzialu nie moze zjesc zmiany czekajacej w debouncie.
-      if (!dirty.current) {
-        return
+      // Wiersz znika - lokalna wartosc przepada niezaleznie od stanu (blocked
+      // po niedomknietym znaczniku, error po nieudanym zapisie bez wznowionego
+      // debounce'u). Trzymanie go dalej jako "brudny" w EditorPage tylko
+      // blokowaloby na stale retranslacje podgladu tego akapitu, nie chronioc
+      // juz niczego.
+      if (dirty.current) {
+        markDirty(false)
       }
-
-      // Ta sama mutacja co przy zwyklym zapisie (nie goly fetch): queryClient
-      // przezyje odmontowanie tego wiersza, wiec onSuccess/onError powyzej i
-      // tak zapisza wynik tam, gdzie kod spoza tego komponentu moze go jeszcze
-      // zobaczyc - cache przy sukcesie, kanal bledu przy porazce. keepalive:
-      // true trzyma zadanie przy zyciu, gdyby to bylo odejscie z calej karty,
-      // nie tylko odmontowanie wiersza przez wirtualizacje.
-      mutateRef.current({ text: latest.current, keepalive: true })
     },
-    [segment.id],
+    [markDirty, segment.id],
   )
 
   return { value, state, message, change }

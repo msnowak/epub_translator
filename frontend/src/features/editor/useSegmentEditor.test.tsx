@@ -173,6 +173,33 @@ describe('useSegmentEditor', () => {
     expect(result.current.message).toContain('znaczniki')
   })
 
+  it('clears the dirty flag on unmount even while blocked, with no save timer pending', async () => {
+    // Regresja: cleanup przy odmontowaniu wracal wczesniej od razu, gdy
+    // saveTimer.current === null - a "blocked" (znacznik jeszcze niedomkniety)
+    // nigdy nie planuje timera zapisu, wiec dirtyIdsRef w EditorPage nigdy nie
+    // odzyskiwalo tego id. Lokalna wartosc i tak przepada przy odmontowaniu,
+    // wiec nie ma juz czego chronic.
+    const onDirtyChange = vi.fn()
+
+    const { result, unmount } = renderHook(
+      () => useSegmentEditor({ segment, chapterId: 'ch-1', onPreview: vi.fn(), onDirtyChange }),
+      { wrapper },
+    )
+
+    act(() => {
+      // Zaden zeton nie zostal - to rozni sie od sygnatury zrodla ('1:paired'),
+      // wiec pozostaje zablokowane (patrz test wyzej dla tego samego wzorca).
+      result.current.change('Zmiana bez zadnego zetonu')
+    })
+
+    expect(result.current.state).toBe('blocked')
+    expect(onDirtyChange).toHaveBeenLastCalledWith('seg-1', true)
+
+    unmount()
+
+    expect(onDirtyChange).toHaveBeenLastCalledWith('seg-1', false)
+  })
+
   it('does not block a translation that repeats one token a different number of times than the source', async () => {
     // TranslationValidator::tokenKinds() (backend) klucz'uje po numerze
     // zetonu, nie po liczbie wystapien - ten sam numer moze powtorzyc sie
