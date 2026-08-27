@@ -71,6 +71,28 @@ final class SegmentEditTest extends ApiTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testSaveExposesPreviewPlaceholdersForTheEditor(): void
+    {
+        // RetranslateSegmentProcessor et UpdateSegmentProcessor obaj wolaja
+        // SegmentPlaceholderExposer::expose() zamiast polegac na normalnym
+        // odczycie - nic nie sprawdzalo, ze ta wartosc przezywa akurat te
+        // dwie sciezki. Gdyby przestala sie wypelniac tu, edytor stracilby
+        // znacznik inline w podgladzie zaraz po zapisie, bez zadnego bledu.
+        $owner = $this->createUser();
+        $segment = $this->segment($owner, 'This is [1]important[/1].', ['1' => '<em>']);
+
+        $this->request(
+            'PATCH',
+            '/api/segments/'.$segment->getId(),
+            ['translatedText' => 'To jest [1]bardzo ważne[/1].'],
+            $this->authenticate($owner),
+            'application/merge-patch+json',
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['1' => '<em>'], $this->payload()['previewPlaceholders']);
+    }
+
     public function testCorrectionDroppingATokenIsRejected(): void
     {
         $owner = $this->createUser();
