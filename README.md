@@ -99,8 +99,14 @@ Editing a paragraph's translation drives two independent debounces, not one:
 - **Save, 800 ms.** After typing stops for 800 ms, the row sends
   `PATCH /api/segments/{id}` and shows "Zapisano" once the response comes
   back. Navigating away or unmounting the row while it still has unsaved
-  changes fires one last save immediately instead of waiting out the
-  debounce, so a quick edit-and-leave is not silently lost.
+  changes - which happens routinely, not just on navigation, since the
+  paragraph list is virtualized and unmounts rows that scroll out of view -
+  fires one last save immediately instead of waiting out the debounce, and
+  goes through the same mutation as an ordinary save, so a quick edit-and-flick
+  is not silently lost: the paragraph list's cache still gets the saved text
+  even though the row itself is gone by the time the response arrives. If
+  that save fails, there is no row left to show the error on, so it surfaces
+  as a banner at the top of the chapter instead.
 
 A translation that removes or unbalances a formatting token (deleting `[/1]`,
 for instance) never reaches the server: the row detects the mismatch, shows a

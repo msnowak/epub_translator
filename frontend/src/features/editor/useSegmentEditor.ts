@@ -25,12 +25,19 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
 
   const dirty = useRef(false)
   const latest = useRef(value)
+  const mounted = useRef(true)
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const mutation = useMutation({
-    mutationFn: (text: string) => updateSegment(segment.id, text),
-    onSuccess: (saved) => {
+  useEffect(
+    () => () => {
+      mounted.current = false
+    },
+    [],
+  )
+
+  const applySaved = useCallback(
+    (saved: Segment) => {
       dirty.current = false
       setState('saved')
       setMessage(null)
@@ -49,12 +56,48 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
       // natychmiastowego przeladowania aktywnej ramki.
       void queryClient.invalidateQueries({ queryKey: ['preview'], refetchType: 'none' })
     },
-    onError: (error: unknown) => {
-      setState('error')
-      // Front nie pisze wlasnych komunikatow - backend mowi po polsku w detail.
-      setMessage(error instanceof ApiError ? error.detail : 'Nie udało się zapisać zmiany.')
+    [chapterId, queryClient],
+  )
+
+  const reportError = useCallback(
+    (error: unknown) => {
+      const detail = error instanceof ApiError ? error.detail : 'Nie udało się zapisać zmiany.'
+
+      if (mounted.current) {
+        setState('error')
+        setMessage(detail)
+
+        return
+      }
+
+      // Wiersza juz nie ma (odmontowany, patrz cleanup nizej) - lokalny stan
+      // bledu nie ma jak sie pokazac. Kanal w cache'u zapytan przezyje
+      // odmontowanie i EditorPage go czyta, wiec to jedyne miejsce, gdzie ten
+      // blad moze jeszcze dotrzec do uzytkownika.
+      queryClient.setQueryData<string | null>(['segments', 'save-error', chapterId], detail)
     },
+    [chapterId, queryClient],
+  )
+
+  const mutation = useMutation({
+    mutationFn: (vars: { text: string; keepalive?: boolean }) =>
+      updateSegment(segment.id, vars.text, { keepalive: vars.keepalive }),
+    onSuccess: applySaved,
+    onError: reportError,
   })
+
+  // useMutation zwraca nowy obiekt-wynik przy kazdym renderze, wiec sam
+  // "mutation" nie nadaje sie na zaleznosc efektu ponizej: gdyby nia byl,
+  // kazdy render (nie tylko odmontowanie) uruchamialby cleanup i kasowal
+  // wciaz czekajacy debounce. Ten ref trzyma najswiezsza metode mutate poza
+  // tablica zaleznosci - synchronizowany efektem (nie bezposrednio w renderze,
+  // refy nie sa do tego), .mutate() zawsze czyta biezacy stan obserwatora
+  // niezaleznie od tego, ktora referencja go woła.
+  const mutateRef = useRef(mutation.mutate)
+
+  useEffect(() => {
+    mutateRef.current = mutation.mutate
+  }, [mutation.mutate])
 
   const change = useCallback(
     (next: string) => {
@@ -91,7 +134,7 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
         // a nie powtarzac zapis, ktory juz ruszyl (i mogl sie nie udac).
         saveTimer.current = null
         setState('saving')
-        mutation.mutate(next)
+        mutation.mutate({ text: next })
       }, SAVE_DELAY_MS)
     },
     [mutation, onPreview, segment.id, segment.previewPlaceholders, segment.sourceText],
@@ -122,11 +165,17 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
       clearTimeout(saveTimer.current)
 
       // Wyjscie z rozdzialu nie moze zjesc zmiany czekajacej w debouncie.
-      if (dirty.current) {
-        // Komponentu juz nie ma, wiec nie ma gdzie pokazac bledu - .catch
-        // tylko po to, zeby odrzucona obietnica nie zostala niezlapana.
-        updateSegment(segment.id, latest.current, { keepalive: true }).catch(() => {})
+      if (!dirty.current) {
+        return
       }
+
+      // Ta sama mutacja co przy zwyklym zapisie (nie goly fetch): queryClient
+      // przezyje odmontowanie tego wiersza, wiec onSuccess/onError powyzej i
+      // tak zapisza wynik tam, gdzie kod spoza tego komponentu moze go jeszcze
+      // zobaczyc - cache przy sukcesie, kanal bledu przy porazce. keepalive:
+      // true trzyma zadanie przy zyciu, gdyby to bylo odejscie z calej karty,
+      // nie tylko odmontowanie wiersza przez wirtualizacje.
+      mutateRef.current({ text: latest.current, keepalive: true })
     },
     [segment.id],
   )

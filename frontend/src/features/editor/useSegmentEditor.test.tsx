@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -199,5 +199,82 @@ describe('useSegmentEditor', () => {
     rerender({ current: { ...segment, translatedText: 'Z serwera.' } })
 
     expect(result.current.value).toBe('Moja [1]niezapisana[/1] zmiana.')
+  })
+
+  it('keeps the cache holding the saved text after the row unmounts mid-debounce', async () => {
+    // SegmentList wirtualizuje wiersze - "napisz, potem przewin liste" zdejmuje
+    // wiersz z DOM-u rutynowo, nie wyjatkowo. Ta sciezka ma isc przez ta sama
+    // mutacje co zwykly zapis (patrz useSegmentEditor), zeby onSuccess wpisal
+    // wynik do cache'u - a nie goly fetch, ktorego nikt nie odbiera.
+    vi.useRealTimers()
+
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+
+    client.setQueryData(['segments', 'ch-1'], [segment])
+
+    function localWrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    }
+
+    server.use(
+      http.patch(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json({ ...segment, translatedText: 'Nowe [1]słowo[/1].', status: 'edited' }),
+      ),
+    )
+
+    const { result, unmount } = renderHook(
+      () => useSegmentEditor({ segment, chapterId: 'ch-1', onPreview: vi.fn() }),
+      { wrapper: localWrapper },
+    )
+
+    act(() => {
+      result.current.change('Nowe [1]słowo[/1].')
+    })
+
+    unmount()
+
+    await waitFor(() => {
+      const cached = client.getQueryData<Segment[]>(['segments', 'ch-1'])
+
+      expect(cached?.[0]?.translatedText).toBe('Nowe [1]słowo[/1].')
+    })
+  })
+
+  it('surfaces a keepalive save failure on the page-level channel once the row is gone', async () => {
+    // Po odmontowaniu nie ma juz gdzie pokazac message/state lokalnie (patrz
+    // test wyzej) - reportError() w useSegmentEditor ma wtedy pisac do
+    // ['segments', 'save-error', chapterId], jedynego kanalu, ktory strone
+    // przezywa odmontowanie wiersza.
+    vi.useRealTimers()
+
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+
+    function localWrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    }
+
+    server.use(
+      http.patch(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json(
+          { status: 422, detail: 'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał.' },
+          { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+
+    const { result, unmount } = renderHook(
+      () => useSegmentEditor({ segment, chapterId: 'ch-1', onPreview: vi.fn() }),
+      { wrapper: localWrapper },
+    )
+
+    act(() => {
+      result.current.change('Nowe [1]słowo[/1].')
+    })
+
+    unmount()
+
+    await waitFor(() => {
+      expect(client.getQueryData(['segments', 'save-error', 'ch-1'])).toContain('te same znaczniki')
+    })
   })
 })
