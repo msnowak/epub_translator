@@ -7,10 +7,9 @@ Symfony Messenger worker that runs the translation. The frontend is a Vite +
 React + TypeScript single-page app.
 
 You can register an account, upload a book, watch it being translated
-paragraph by paragraph, pause and resume the run, and download the result as
-an EPUB that opens in a reader. Correcting individual paragraphs is possible
-through the API but does not have a screen yet - the three-column editor with
-a live chapter preview is the next stage.
+paragraph by paragraph, pause and resume the run, correct individual
+paragraphs in a three-column editor with a live chapter preview, and download
+the result as an EPUB that opens in a reader.
 
 ## Prerequisites
 
@@ -77,6 +76,67 @@ preview uses, so the downloaded file cannot disagree with what the preview
 showed. Images, fonts, stylesheets and navigation are copied byte for byte;
 the package document has its `dc:language` set to the target language and its
 `dc:title` to the project title.
+
+## The chapter editor
+
+`/projekty/:id/rozdzialy/:chapterId` opens a three-column view for correcting
+one chapter paragraph by paragraph: a chapter list on the left, the chapter's
+paragraphs in the middle (virtualized, so a long chapter does not render every
+row up front), and a live preview of the whole chapter on the right. A
+`?akapit=<segmentId>` query parameter scrolls both the paragraph list and the
+preview to one paragraph on load - the failed-paragraphs list in the project
+view links here that way.
+
+Editing a paragraph's translation drives two independent debounces, not one:
+
+- **Preview, 400 ms.** After typing stops for 400 ms, the browser expands the
+  edited paragraph's `[1]...[/1]` tokens back into inline markup - using a
+  TypeScript port of the same detokenizing logic the backend's
+  `InlineTokenizer::detokenize()` implements - and swaps just that paragraph's
+  node into the preview document. This is quick, but it is a re-implementation
+  of one method, not a call into it: nothing keeps the two sides in sync
+  automatically if one of them changes.
+- **Save, 800 ms.** After typing stops for 800 ms, the row sends
+  `PATCH /api/segments/{id}` and shows "Zapisano" once the response comes
+  back. Navigating away or unmounting the row while it still has unsaved
+  changes - which happens routinely, not just on navigation, since the
+  paragraph list is virtualized and unmounts rows that scroll out of view -
+  fires one last save immediately instead of waiting out the debounce, and
+  goes through the same mutation as an ordinary save, so a quick edit-and-flick
+  is not silently lost: the paragraph list's cache still gets the saved text
+  even though the row itself is gone by the time the response arrives. If
+  that save fails, there is no row left to show the error on, so it is
+  written to a per-chapter channel that the page reads as a banner at the
+  top of the chapter instead - but only when the row disappeared for some
+  other reason than switching chapters (the list is virtualized, so a row
+  scrolling out of view unmounts it too). Leaving the chapter is the
+  channel's actual trigger, and it writes under the chapter being left,
+  which the page has already stopped reading by the time the response
+  arrives - that case is a known gap, not yet covered.
+
+A translation that drops a token number or invents one that is not in the
+source never reaches the server: the row detects the mismatch, shows a
+validation message, and blocks the save until the same set of token numbers
+(and their void/paired kind) is back. This mirrors `TranslationValidator`'s
+own `tokenKinds()` check server-side, deliberately down to its blind spot: it
+is keyed by token number, not by how many times a number repeats, so a
+translation that repeats one token a different number of times than the
+source passes this guard exactly as it passes the backend. Nesting and
+closing order (`[/1]` before its `[1]`, or a `[1]` that never closes) is a
+separate rule the backend alone enforces (`assertWellNested()`) - the editor
+does not pre-check it, so that class of mistake still reaches
+`PATCH /api/segments/{id}` and comes back as an ordinary 422 with the
+backend's message, rather than being blocked client-side.
+
+The live preview is an approximation, not a second copy of the export
+pipeline, and that is true even before any edit: it exists only between an
+edit and the next chapter reload. `App\Epub\ChapterComposer` remains the one
+place that decides how a translation renders into the chapter's XHTML - it
+produced the document the editor loaded, and it produces the file that
+`GET /api/projects/{id}/download` returns. Reloading the chapter (or
+downloading the book) always reflects `ChapterComposer`'s rendering, which is
+the one that matters; the live preview is a best-effort stand-in for the
+fraction of a second before that reload happens.
 
 ## Exercising the API by hand
 

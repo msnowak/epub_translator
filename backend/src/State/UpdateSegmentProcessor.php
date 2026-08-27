@@ -8,7 +8,9 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
+use App\Preview\SegmentPlaceholderExposer;
 use App\Translation\TranslationRejectedException;
+use App\Translation\TranslationRejectionReason;
 use App\Translation\TranslationValidator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -27,6 +29,7 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
     public function __construct(
         private TranslationValidator $validator,
         private EntityManagerInterface $entityManager,
+        private SegmentPlaceholderExposer $exposer,
     ) {
     }
 
@@ -48,12 +51,8 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
 
         try {
             $this->validator->validate($data->getSourceText(), $translation);
-        } catch (TranslationRejectedException) {
-            // Techniczny powod zostaje w wyjatku; uzytkownikowi potrzebna jest
-            // wskazowka, co poprawic, nie nazwa zlamanej reguly.
-            throw new UnprocessableEntityHttpException(
-                'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał, w tej samej liczbie.',
-            );
+        } catch (TranslationRejectedException $exception) {
+            throw new UnprocessableEntityHttpException($this->detailFor($exception));
         }
 
         // Reczna poprawka jest ostateczna: automatyczne ponawianie nigdy jej
@@ -62,6 +61,29 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
         $data->setErrorMessage(null);
         $this->entityManager->flush();
 
+        $this->exposer->expose($data);
+
         return $data;
+    }
+
+    /**
+     * Komunikat ma odpowiadac faktycznej przyczynie: "brakuje zetonow" przy
+     * pustym tlumaczeniu kieruje poszukiwania w zla strone.
+     */
+    private function detailFor(TranslationRejectedException $exception): string
+    {
+        return match ($exception->reason) {
+            TranslationRejectionReason::Empty => 'Podaj treść tłumaczenia.',
+            TranslationRejectionReason::TokenIntegrity => 'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał, prawidłowo zagnieżdżone.',
+            // validate() nigdy nie zglasza echa - sprawdza je wylacznie
+            // assertNotEchoed(), ktorej ten procesor celowo nie wola. Gdyby
+            // kiedys ta galaz stala sie osiagalna, cichy komunikat o zetonach
+            // bylby klamstwem identycznym z tym, co naprawia to zadanie -
+            // lepiej glosno wybuchnac i zdradzic zlamany niezmiennik, niz
+            // cicho klamac uzytkownikowi.
+            TranslationRejectionReason::Echo => throw new \LogicException(
+                'TranslationRejectionReason::Echo must never reach UpdateSegmentProcessor: the echo rule is an engine-path check (see TranslationValidator::assertNotEchoed()), not a data-integrity failure a human edit can trigger.',
+            ),
+        };
     }
 }

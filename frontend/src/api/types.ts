@@ -36,3 +36,23 @@ export interface Chapter {
   segmentCounts: SegmentCounts
   totalSegments: number
 }
+
+export interface SegmentChapter {
+  id: string
+  spineOrder: number
+  title: string | null
+}
+
+export interface Segment {
+  id: string
+  position: number
+  nodeIndex: number
+  subIndex: number
+  sourceText: string
+  translatedText: string | null
+  status: SegmentStatus
+  errorMessage: string | null
+  /** The opening markup each token stands for, already sanitized by the backend so it is safe to inject into the preview document. */
+  previewPlaceholders: Record<string, string>
+  chapter: SegmentChapter
+}

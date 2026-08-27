@@ -92,7 +92,12 @@ final readonly class InlineTokenizer
         }
     }
 
-    private function openingMarkup(\DOMElement $element): string
+    /**
+     * Writes an element back as the opening markup a token stands for. Public
+     * because PlaceholderSanitizer round-trips those very strings and must
+     * emit them exactly the way tokenize() produced them.
+     */
+    public function openingMarkup(\DOMElement $element): string
     {
         $name = strtolower($element->nodeName);
         $markup = '<'.$name;

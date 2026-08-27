@@ -1,12 +1,8 @@
+import { Link } from 'react-router-dom'
 import type { Chapter } from '../../api/types'
+import { chapterLabel } from './chapterLabel'
 
-function chapterLabel(chapter: Chapter): string {
-  // Rozdzial bez tytulu w OPF-ie i tak musi dac sie wskazac, stad numer
-  // z kolejnosci w spine.
-  return chapter.title ?? `Rozdział ${chapter.spineOrder + 1}`
-}
-
-export function ChapterTable({ chapters }: { chapters: Chapter[] }) {
+export function ChapterTable({ chapters, projectId }: { chapters: Chapter[]; projectId: string }) {
   if (0 === chapters.length) {
     return <p className="text-neutral-600">Rozdziały pojawią się, gdy plik zostanie przeanalizowany.</p>
   }
@@ -26,7 +22,11 @@ export function ChapterTable({ chapters }: { chapters: Chapter[] }) {
 
           return (
             <tr key={chapter.id} className={failed > 0 ? 'border-b bg-red-50' : 'border-b'}>
-              <td className="py-2">{chapterLabel(chapter)}</td>
+              <td className="py-2">
+                <Link className="underline" to={`/projekty/${projectId}/rozdzialy/${chapter.id}`}>
+                  {chapterLabel(chapter)}
+                </Link>
+              </td>
               <td className="py-2">
                 {translated + edited} z {chapter.totalSegments}
               </td>

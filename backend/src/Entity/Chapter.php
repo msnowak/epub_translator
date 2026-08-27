@@ -35,7 +35,7 @@ class Chapter
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
-    #[Groups(['chapter:read'])]
+    #[Groups(['chapter:read', 'segment:read'])]
     private Uuid $id;
 
     #[ORM\ManyToOne(targetEntity: Project::class)]
@@ -43,14 +43,14 @@ class Chapter
     private Project $project;
 
     #[ORM\Column]
-    #[Groups(['chapter:read'])]
+    #[Groups(['chapter:read', 'segment:read'])]
     private int $spineOrder;
 
     #[ORM\Column(length: 512)]
     private string $href;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Groups(['chapter:read'])]
+    #[Groups(['chapter:read', 'segment:read'])]
     private ?string $title;
 
     /**

@@ -4,15 +4,20 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use App\Filter\SegmentStatusFilter;
 use App\Repository\SegmentRepository;
+use App\State\ProjectSegmentCollectionProvider;
 use App\State\RetranslateSegmentProcessor;
 use App\State\SegmentCollectionProvider;
+use App\State\SegmentItemProvider;
 use App\State\UpdateSegmentProcessor;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -22,6 +27,7 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity(repositoryClass: SegmentRepository::class)]
 #[ORM\Index(fields: ['project', 'status'], name: 'idx_segment_project_status')]
 #[ORM\UniqueConstraint(name: 'uniq_segment_node', columns: ['chapter_id', 'node_index', 'sub_index'])]
+#[ApiFilter(SegmentStatusFilter::class)]
 #[ApiResource(
     operations: [
         new GetCollection(
@@ -30,8 +36,32 @@ use Symfony\Component\Uid\Uuid;
                 'chapterId' => new Link(fromClass: Chapter::class, toProperty: 'chapter'),
             ],
             order: ['position' => 'ASC'],
-            paginationItemsPerPage: 100,
+            // Rozdzial to jednostka ograniczona z natury, a edytor potrzebuje
+            // go w calosci. Przy Accept: application/json odpowiedz jest gola
+            // tablica, wiec front nie mialby nawet jak zobaczyc, ze cos uciete.
+            paginationEnabled: false,
             provider: SegmentCollectionProvider::class,
+        ),
+        new GetCollection(
+            uriTemplate: '/projects/{projectId}/segments',
+            uriVariables: [
+                'projectId' => new Link(fromClass: Project::class, toProperty: 'project'),
+            ],
+            // Position liczy sie od zera w kazdym rozdziale, wiec bez rozdzialu
+            // w kluczu sortowania akapity roznych rozdzialow by sie przeplotly.
+            order: ['chapter.spineOrder' => 'ASC', 'position' => 'ASC'],
+            // Ta kolekcja sluzy wylacznie liscie nieudanych akapitow, a ta jest
+            // ograniczona z natury ksiazka - tak samo jak kolekcja rozdzialu
+            // wyzej. Bez tego domyslny limit API Platform (30) obcinalby liste
+            // po cichu: Accept: application/json oddaje gola tablice, wiec front
+            // nie mialby nawet jak zobaczyc, ze cos uciete.
+            paginationEnabled: false,
+            provider: ProjectSegmentCollectionProvider::class,
+        ),
+        new Get(
+            uriTemplate: '/segments/{id}',
+            security: 'object === null or is_granted("PROJECT_VIEW", object.getProject())',
+            provider: SegmentItemProvider::class,
         ),
         new Patch(
             uriTemplate: '/segments/{id}',
@@ -71,6 +101,7 @@ class Segment
 
     #[ORM\ManyToOne(targetEntity: Chapter::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    #[Groups(['segment:read'])]
     private Chapter $chapter;
 
     #[ORM\Column]
@@ -107,6 +138,16 @@ class Segment
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     #[Groups(['segment:read'])]
     private ?string $errorMessage = null;
+
+    /**
+     * Inline markup for the editor's live preview, already run through the same
+     * rules as the whole chapter. There is no column behind it - a provider
+     * fills it at read time, the way Chapter::$segmentCounts works.
+     *
+     * @var array<string, string>
+     */
+    #[Groups(['segment:read'])]
+    private array $previewPlaceholders = [];
 
     /**
      * @param array<array-key, string> $placeholders
@@ -210,5 +251,17 @@ class Segment
     public function setErrorMessage(?string $errorMessage): void
     {
         $this->errorMessage = $errorMessage;
+    }
+
+    /** @return array<string, string> */
+    public function getPreviewPlaceholders(): array
+    {
+        return $this->previewPlaceholders;
+    }
+
+    /** @param array<string, string> $placeholders */
+    public function setPreviewPlaceholders(array $placeholders): void
+    {
+        $this->previewPlaceholders = $placeholders;
     }
 }

@@ -2,7 +2,7 @@ import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { Button } from '@/components/ui/button'
 
-export function AppLayout() {
+export function AppLayout({ wide = false }: { wide?: boolean }) {
   const { signOut } = useAuth()
   const navigate = useNavigate()
 
@@ -12,9 +12,9 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="flex h-screen flex-col">
       <header className="border-b">
-        <div className="mx-auto flex max-w-4xl items-center justify-between p-4">
+        <div className={`flex items-center justify-between p-4 ${wide ? 'px-6' : 'mx-auto max-w-4xl'}`}>
           <Link className="font-semibold" to="/">
             EPUB Translator
           </Link>
@@ -23,8 +23,10 @@ export function AppLayout() {
           </Button>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl p-8">
-        <Outlet />
+      <main className="min-h-0 flex-1">
+        <div className={wide ? 'h-full px-6 py-4' : 'mx-auto max-w-4xl p-8'}>
+          <Outlet />
+        </div>
       </main>
     </div>
   )
