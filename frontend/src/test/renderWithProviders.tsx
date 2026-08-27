@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type RenderResult, render } from '@testing-library/react'
+import { StrictMode } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { AuthProvider } from '../auth/AuthProvider'
@@ -14,12 +15,19 @@ export function renderWithProviders(
   })
 
   function Wrapper({ children }: { children: ReactNode }) {
+    // StrictMode tutaj - zeby kolejnosc providerow dokladnie odzwierciedlala
+    // produkcje (patrz main.tsx). Bez tego StrictMode double-invokes efektow
+    // (mount->cleanup->mount w dev) nigdy by sie tu nie zdarzylo i testy
+    // moglyby przejsc na haku, ktory dziala tylko dopoki efekt startowy
+    // nie wykona sie dwa razy - patrz useSegmentEditor's "mounted" ref.
     return (
-      <MemoryRouter initialEntries={[options.route ?? '/']}>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>{children}</AuthProvider>
-        </QueryClientProvider>
-      </MemoryRouter>
+      <StrictMode>
+        <MemoryRouter initialEntries={[options.route ?? '/']}>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>{children}</AuthProvider>
+          </QueryClientProvider>
+        </MemoryRouter>
+      </StrictMode>
     )
   }
 

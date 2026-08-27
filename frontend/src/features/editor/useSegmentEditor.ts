@@ -33,12 +33,13 @@ export function useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange 
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mounted.current = true
+
+    return () => {
       mounted.current = false
-    },
-    [],
-  )
+    }
+  }, [])
 
   // Jedno miejsce, ktore aktualizuje ref lokalny (czytelny synchronicznie w
   // change()) i informuje rodzica - to on trzyma, ktore akapity maja

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { Route, Routes } from 'react-router-dom'
@@ -588,6 +588,56 @@ describe('EditorPage', () => {
       expect(screen.getByText('Coś poszło nie tak.')).toBeInTheDocument()
     })
   })
+
+  it('shows a failed save on the row itself while the row is still on screen (regression)', async () => {
+    // Regresja finalnego przegladu: useSegmentEditor inicjalizowal "mounted"
+    // efektem, ktorego cialo niczego nie przypisywalo - pod StrictMode
+    // (mount->cleanup->mount przy montowaniu) cleanup ustawial mounted.current
+    // na false, a nastepny "setup" go nie odzyskiwal, wiec zostawal false na
+    // caly czas zycia wiersza. reportError() bralo wtedy zawsze galaz "wiersza
+    // juz nie ma" - nawet gdy wiersz byl cala tam - i kazdy zwykly (bez
+    // odmontowania) nieudany zapis trafial wylacznie na baner strony zamiast
+    // pokazac sie przy akapicie. renderWithProviders owija teraz w
+    // <StrictMode> (patrz komentarz tam), dokladnie jak main.tsx, wiec ten
+    // test lapie regresje bez wlasnego recznego StrictMode.
+    server.use(
+      http.patch(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json(
+          { status: 422, detail: 'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał.' },
+          { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+
+    renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+
+    const field = screen.getByLabelText('Tłumaczenie akapitu 1')
+
+    // fireEvent, nie userEvent.type - patrz komentarz w tescie zapisu wyzej.
+    fireEvent.change(field, { target: { value: 'Nowe [1]słowo[/1].' } })
+
+    // "at the row": tekst bledu ma sie pojawic w poddrzewie samego wiersza
+    // (obok pola tekstowego), nie tylko gdzies na stronie - baner zyje w
+    // <header> EditorPage, poza tym poddrzewem.
+    const row = field.closest('.flex.flex-col.gap-1') as HTMLElement
+
+    await waitFor(
+      () => {
+        expect(within(row).getByText('Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał.')).toBeInTheDocument()
+      },
+      { timeout: 5000 },
+    )
+
+    // Baner strony jest zarezerwowany dla wierszy, ktorych juz nie ma (patrz
+    // test wyzej) - zwykly, zamontowany blad nie ma tam trafiac, wiec tekst
+    // wystepuje dokladnie raz (przy wierszu), a nie zdublowany jeszcze w
+    // nagłówku.
+    expect(
+      screen.queryAllByText('Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał.'),
+    ).toHaveLength(1)
+  }, 10000)
 
   it('reloads both the paragraph list and the preview from the banner button', async () => {
     // Obie kolumny czytaja ten sam rozdzial - klikniecie "Wczytaj ponownie" ma
