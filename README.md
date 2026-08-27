@@ -105,8 +105,14 @@ Editing a paragraph's translation drives two independent debounces, not one:
   goes through the same mutation as an ordinary save, so a quick edit-and-flick
   is not silently lost: the paragraph list's cache still gets the saved text
   even though the row itself is gone by the time the response arrives. If
-  that save fails, there is no row left to show the error on, so it surfaces
-  as a banner at the top of the chapter instead.
+  that save fails, there is no row left to show the error on, so it is
+  written to a per-chapter channel that the page reads as a banner at the
+  top of the chapter instead - but only when the row disappeared for some
+  other reason than switching chapters (the list is virtualized, so a row
+  scrolling out of view unmounts it too). Leaving the chapter is the
+  channel's actual trigger, and it writes under the chapter being left,
+  which the page has already stopped reading by the time the response
+  arrives - that case is a known gap, not yet covered.
 
 A translation that drops a token number or invents one that is not in the
 source never reaches the server: the row detects the mismatch, shows a

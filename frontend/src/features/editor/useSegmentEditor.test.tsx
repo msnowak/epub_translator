@@ -135,6 +135,62 @@ describe('useSegmentEditor', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['segments', 'failed'] })
   })
 
+  it('clears a stale save-error banner for this chapter as soon as a row mounts', () => {
+    // Klucz ['segments', 'save-error', chapterId] ma staleTime: Infinity po
+    // stronie EditorPage, wiec bez tego czyszczenia wpis sprzed maks. 5 minut
+    // (domyslne gcTime) potrafilby przezyc powrot do tego samego rozdzialu i
+    // wyplynac jako baner bez zadnego biezacego bledu za nim.
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+
+    client.setQueryData(['segments', 'save-error', 'ch-1'], 'Stary błąd sprzed 5 minut.')
+
+    function localWrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    }
+
+    renderHook(() => useSegmentEditor({ segment, chapterId: 'ch-1', onPreview: vi.fn() }), {
+      wrapper: localWrapper,
+    })
+
+    expect(client.getQueryData(['segments', 'save-error', 'ch-1'])).toBeNull()
+  })
+
+  it('clears the save-error channel for this chapter once a save succeeds', async () => {
+    // Dopelnienie testu wyzej: sam mount czysci tylko wpis sprzed montowania -
+    // zapis, ktory sie powiodl w trakcie zycia wiersza, ma sprzatnac po sobie
+    // rowniez, gdyby kanal zdazyl juz cos zapisac (np. wczesniejszy nieudany
+    // zapis tego samego wiersza).
+    server.use(
+      http.patch(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json({ ...segment, translatedText: 'Nowe [1]słowo[/1].', status: 'edited' }),
+      ),
+    )
+
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+
+    function localWrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    }
+
+    const { result } = renderHook(
+      () => useSegmentEditor({ segment, chapterId: 'ch-1', onPreview: vi.fn() }),
+      { wrapper: localWrapper },
+    )
+
+    client.setQueryData(['segments', 'save-error', 'ch-1'], 'Poprzedni nieudany zapis.')
+
+    act(() => {
+      result.current.change('Nowe [1]słowo[/1].')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800)
+    })
+
+    expect(result.current.state).toBe('saved')
+    expect(client.getQueryData(['segments', 'save-error', 'ch-1'])).toBeNull()
+  })
+
   it('blocks a save when a whole token number disappears mid-edit', async () => {
     // tokenSignature() jest teraz nieczuly na liczbe wystapien (patrz nizej),
     // wiec usuniecie jednego z dwoch wystapien tego samego numeru juz nie

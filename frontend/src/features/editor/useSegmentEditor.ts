@@ -41,6 +41,16 @@ export function useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange 
     }
   }, [])
 
+  useEffect(() => {
+    // Wiersz tego rozdzialu wlasnie sie zamontowal - to swiezy widok, ktory
+    // nie ma za soba zadnego biezacego bledu zapisu. Bez tego wpis sprzed
+    // maks. 5 minut (domyslne gcTime) potrafi przezyc w cache'u i wyplynac
+    // jako baner, chociaz aktualnie nic sie nie udalo (patrz notatka o dlugu
+    // w README - przypadek przejscia miedzy rozdzialami w trakcie keepalive
+    // nie jest tu naprawiany, tylko to odswiezanie stalego wpisu).
+    queryClient.setQueryData<string | null>(['segments', 'save-error', chapterId], null)
+  }, [chapterId, queryClient])
+
   // Jedno miejsce, ktore aktualizuje ref lokalny (czytelny synchronicznie w
   // change()) i informuje rodzica - to on trzyma, ktore akapity maja
   // niezapisana zmiane, zeby retranslacja w tle wiedziala, ktorych wezlow
@@ -61,6 +71,11 @@ export function useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange 
       queryClient.setQueryData<Segment[]>(['segments', chapterId], (current) =>
         current?.map((item) => (item.id === saved.id ? saved : item)),
       )
+      // Zapis sie udal - kanal bledu zapisu dla tego rozdzialu (patrz
+      // reportError nizej) nie ma juz czego zglaszac. Bez tego stary wpis
+      // zostaje w cache'u (staleTime: Infinity po stronie EditorPage) i moze
+      // wyplynac jako baner bez zadnego biezacego bledu za nim.
+      queryClient.setQueryData<string | null>(['segments', 'save-error', chapterId], null)
       // Zapisana recznie poprawka wraca jako "edited" - jesli akapit byl
       // wczesniej "failed", projektowa lista nieudanych akapitow musi to
       // zauwazyc, a nie trzymac stary blad.
