@@ -53,28 +53,40 @@ export function EditorPage() {
     }
   }, [])
 
-  // Odczytywany przez retranslationPreview ponizej, zeby ten callback moze
-  // zostac referencyjnie stabilny (tablica zaleznosci pusta poza patchPreview,
-  // ktory sam jest stabilny) - inaczej zmiana aktywnego akapitu przezbrajalaby
-  // interwal odpytywania w useRetranslation przy kazdym kliknieciu, tak jak
-  // opisuje to komentarz przy "awaitingRef" w tamtym haku.
-  const activeIdRef = useRef<string | null>(null)
+  // Akapity z niezapisana zmiana (patrz useSegmentEditor/markDirty) - nie
+  // stan Reactowy, bo retranslationPreview ponizej musi zostac referencyjnie
+  // stabilny (inaczej przezbrajalby interwal odpytywania w useRetranslation
+  // przy kazdym naciscietym klawiszu, patrz "awaitingRef" w tamtym haku), a
+  // zawartosc tego zbioru zmienia sie po kazdym klawiszu.
+  const dirtyIdsRef = useRef<Set<string>>(new Set())
 
+  // Zmiana rozdzialu porzuca wszystkie wiersze poprzedniego - zaden z nich
+  // nie moze zostac "brudny" na zawsze i blokowac podglad akapitu o tym samym
+  // indeksie w nowym rozdziale.
   useEffect(() => {
-    activeIdRef.current = activeId
-  }, [activeId])
+    dirtyIdsRef.current = new Set()
+  }, [chapterId])
+
+  const markDirty = useCallback((segmentId: string, dirty: boolean) => {
+    if (dirty) {
+      dirtyIdsRef.current.add(segmentId)
+    } else {
+      dirtyIdsRef.current.delete(segmentId)
+    }
+  }, [])
 
   const retranslationPreview = useCallback(
     (segmentId: string, html: string) => {
-      // Wiersz z fokusem to ten, ktory uzytkownik wlasnie ogląda albo edytuje
+      // Wiersz z niezapisana zmiana to ten, ktory uzytkownik wlasnie edytuje
       // - jego wlasny debounce w useSegmentEditor i tak wpisuje najnowsza
       // tresc do tego samego wezla po kazdym klawiszu. Gdyby ponowione
       // tlumaczenie nadpisalo ten wezel w tym momencie, wygraloby wyscig i
       // przez chwile pokazywaloby cudza tresc pod kursorem piszacego, wiec
-      // manualna sciezka ma pierwszenstwo dla aktywnego wiersza. Kazdy inny
-      // wiersz (retranslacja akapitu, ktorego uzytkownik akurat nie edytuje)
-      // przyjmuje podmiane normalnie.
-      if (segmentId === activeIdRef.current) {
+      // manualna sciezka ma pierwszenstwo dla kazdego akapitu z niezapisana
+      // zmiana. Samo skupienie na polu (bez pisania) niczego tu nie chroni -
+      // kazdy inny wiersz (w tym ten po prostu ogladany) przyjmuje podmiane
+      // normalnie.
+      if (dirtyIdsRef.current.has(segmentId)) {
         return
       }
 
@@ -220,6 +232,7 @@ export function EditorPage() {
             onPreview={patchPreview}
             onActivate={activateFromRow}
             onRetranslate={retranslation.retranslate}
+            onDirtyChange={markDirty}
           />
         )}
       </section>

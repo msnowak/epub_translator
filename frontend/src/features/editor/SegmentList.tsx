@@ -17,9 +17,19 @@ interface Props {
   onPreview: (segmentId: string, html: string) => void
   onActivate: (segmentId: string) => void
   onRetranslate: (segmentId: string) => void
+  onDirtyChange: (segmentId: string, dirty: boolean) => void
 }
 
-export function SegmentList({ segments, chapterId, activeId, scrollTo, onPreview, onActivate, onRetranslate }: Props) {
+export function SegmentList({
+  segments,
+  chapterId,
+  activeId,
+  scrollTo,
+  onPreview,
+  onActivate,
+  onRetranslate,
+  onDirtyChange,
+}: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   // Czytany w efekcie przewijania ponizej, zeby nie trzeba bylo wpisywac
   // "segments" do jego zaleznosci - inaczej kazde przeliczenie widocznej
@@ -77,6 +87,7 @@ export function SegmentList({ segments, chapterId, activeId, scrollTo, onPreview
                 onPreview={onPreview}
                 onActivate={onActivate}
                 onRetranslate={onRetranslate}
+                onDirtyChange={onDirtyChange}
               />
             </div>
           )

@@ -305,12 +305,11 @@ describe('EditorPage', () => {
     )
   }, 12000)
 
-  it('lets a focused paragraph keep its preview node while a retranslation for it lands', async () => {
-    // Ten sam wezel podgladu obsluguje reczna edycje i ponowione tlumaczenie
-    // - gdyby ponowienie wygralo wyscig z uzytkownikiem, ktory wlasnie
-    // ogląda/edytuje ten akapit, przez chwile pokazywaloby cudza tresc pod
-    // kursorem. Skupienie (focus) na polu tekstowym oznacza akapit jako
-    // aktywny; dopoki nim jest, retranslacja ma zostawic wezel w spokoju.
+  it('lets a retranslation for a merely-focused paragraph reach the preview', async () => {
+    // Klikniecie w akapit zeby go przeczytac, a potem "Przetlumacz ponownie"
+    // to zwykly przeplyw - fokus sam z siebie nie chroni niczego (patrz
+    // przeglad stage 7, finding 5: straznik kluczowany samym fokusem blokowal
+    // ten wlasnie przypadek na stale, bo focus nigdy sie nie czyscil).
     server.use(
       http.post(`${API}/api/segments/seg-1/retranslate`, () =>
         HttpResponse.json({
@@ -369,11 +368,95 @@ describe('EditorPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Przetłumacz ponownie' }))
 
-    // Odczekujemy dluzej niz jeden cykl odpytywania (2s), zeby dac
-    // retranslacji szanse dobiec konca i sprobowac podmienic wezel.
+    await waitFor(
+      () => {
+        expect(inner.querySelector('[data-segment-id="seg-1"]')?.innerHTML).toBe(
+          'Świeże <em>tłumaczenie</em>.',
+        )
+      },
+      { timeout: 10000 },
+    )
+  }, 12000)
+
+  it('leaves an unsaved edit in the preview alone while its retranslation is still pending', async () => {
+    // W odroznieniu od testu wyzej: tu uzytkownik faktycznie pisze (nie samo
+    // skupienie) - straznik ma chronic akurat ten przypadek, zeby ponowienie
+    // w tle nie wygralo wyscigu z odpowiedzia serwera na wlasny debounce
+    // zapisu tego wiersza. Patrz komentarz przy dirtyIdsRef w EditorPage.
+    server.use(
+      http.post(`${API}/api/segments/seg-1/retranslate`, () =>
+        HttpResponse.json({
+          id: 'seg-1',
+          position: 0,
+          nodeIndex: 0,
+          subIndex: 0,
+          sourceText: 'A [1]word[/1].',
+          translatedText: null,
+          status: 'processing',
+          errorMessage: null,
+          previewPlaceholders: { '1': '<em>' },
+          chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
+        }),
+      ),
+      http.get(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json({
+          id: 'seg-1',
+          position: 0,
+          nodeIndex: 0,
+          subIndex: 0,
+          sourceText: 'A [1]word[/1].',
+          translatedText: 'Świeże [1]tłumaczenie[/1].',
+          status: 'translated',
+          errorMessage: null,
+          previewPlaceholders: { '1': '<em>' },
+          chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
+        }),
+      ),
+      http.patch(`${API}/api/segments/seg-1`, () =>
+        // Zawiesza sie na zawsze - ten test sprawdza tylko, ze podglad zostaje
+        // nietkniety, dopoki wlasny zapis wiersza wciaz trwa/czeka.
+        new Promise(() => {}),
+      ),
+    )
+
+    renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+
+    const frame = screen.getByTitle('Podgląd rozdziału') as HTMLIFrameElement
+    const inner = frame.contentDocument
+
+    if (null === inner) {
+      throw new Error('brak contentDocument ramki w tym srodowisku testowym')
+    }
+
+    inner.body.innerHTML = '<p data-segment-id="seg-1">Jakieś <em>słowo</em>.</p>'
+
+    if (null !== inner.defaultView) {
+      inner.defaultView.Element.prototype.scrollIntoView = () => {}
+    }
+
+    // fireEvent, nie userEvent.type - patrz komentarz w tescie zapisu wyzej
+    // w tym pliku o nawiasach kwadratowych w tokenach.
+    fireEvent.change(screen.getByLabelText('Tłumaczenie akapitu 1'), {
+      target: { value: 'Moja [1]niezapisana[/1] zmiana.' },
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Przetłumacz ponownie' }))
+
+    // Wlasny podglad pisania (debounce 400ms w useSegmentEditor) i tak
+    // podmienia ten wezel niezaleznie od straznika ponizej - straznik chroni
+    // tylko przed odpowiedzia RETRANSLACJI w tle, nie przed wlasnym podgladem
+    // uzytkownika. Odczekujemy dluzej niz jeden cykl odpytywania (2s), zeby
+    // dac retranslacji szanse dobiec konca i sprobowac (bezskutecznie)
+    // podmienic wezel.
+    await waitFor(() => {
+      expect(inner.querySelector('[data-segment-id="seg-1"]')?.innerHTML).toBe('Moja <em>niezapisana</em> zmiana.')
+    })
+
     await new Promise((resolve) => setTimeout(resolve, 2500))
 
-    expect(inner.querySelector('[data-segment-id="seg-1"]')?.innerHTML).toBe('Jakieś <em>słowo</em>.')
+    expect(inner.querySelector('[data-segment-id="seg-1"]')?.innerHTML).toBe('Moja <em>niezapisana</em> zmiana.')
   }, 12000)
 
   it('keeps only the failed paragraphs when asked to', async () => {
@@ -445,6 +528,46 @@ describe('EditorPage', () => {
 
     await waitFor(() => {
       expect(scrollToIndexSpy()).toHaveBeenCalledWith(0, { align: 'center' })
+    })
+  })
+
+  it('keeps an edit made just before the row is unmounted, not the pre-edit text', async () => {
+    // "Tylko nieudane" odmontowuje ten wiersz od razu (seg-1 ma status
+    // "translated", nie "failed") - debounce zapisu (800ms) jeszcze nie
+    // zdazyl odpalic, wiec to cwiczy dokladnie sciezke keepalive z cleanup w
+    // useSegmentEditor (patrz przeglad stage 7, finding 2), nie zwykly zapis.
+    server.use(
+      http.patch(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json({
+          id: 'seg-1',
+          position: 0,
+          nodeIndex: 0,
+          subIndex: 0,
+          sourceText: 'A [1]word[/1].',
+          translatedText: 'Nowe [1]słowo[/1].',
+          status: 'edited',
+          errorMessage: null,
+          previewPlaceholders: { '1': '<em>' },
+          chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
+        }),
+      ),
+    )
+
+    renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+
+    fireEvent.change(screen.getByLabelText('Tłumaczenie akapitu 1'), {
+      target: { value: 'Nowe [1]słowo[/1].' },
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tylko nieudane' }))
+    await screen.findByText('W tym rozdziale nie ma nieudanych akapitów.')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Wszystkie akapity' }))
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Nowe [1]słowo[/1].')).toBeInTheDocument()
     })
   })
 

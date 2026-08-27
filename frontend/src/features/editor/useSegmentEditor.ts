@@ -15,9 +15,13 @@ interface Options {
   segment: Segment
   chapterId: string
   onPreview: (segmentId: string, html: string) => void
+  // Opcjonalny, bo tego haka uzywa tez SegmentList.test.tsx bez rodzica, ktory
+  // sledziyby "brudne" wiersze - patrz activate()/retranslationPreview w
+  // EditorPage, ktore go faktycznie podaja.
+  onDirtyChange?: (segmentId: string, dirty: boolean) => void
 }
 
-export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
+export function useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange }: Options) {
   const queryClient = useQueryClient()
   const [value, setValue] = useState(segment.translatedText ?? '')
   const [state, setState] = useState<SaveState>('clean')
@@ -36,9 +40,21 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
     [],
   )
 
+  // Jedno miejsce, ktore aktualizuje ref lokalny (czytelny synchronicznie w
+  // change()) i informuje rodzica - to on trzyma, ktore akapity maja
+  // niezapisana zmiane, zeby retranslacja w tle wiedziala, ktorych wezlow
+  // podgladu nie wolno jej dotykac.
+  const markDirty = useCallback(
+    (next: boolean) => {
+      dirty.current = next
+      onDirtyChange?.(segment.id, next)
+    },
+    [onDirtyChange, segment.id],
+  )
+
   const applySaved = useCallback(
     (saved: Segment) => {
-      dirty.current = false
+      markDirty(false)
       setState('saved')
       setMessage(null)
       queryClient.setQueryData<Segment[]>(['segments', chapterId], (current) =>
@@ -56,7 +72,7 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
       // natychmiastowego przeladowania aktywnej ramki.
       void queryClient.invalidateQueries({ queryKey: ['preview'], refetchType: 'none' })
     },
-    [chapterId, queryClient],
+    [chapterId, markDirty, queryClient],
   )
 
   const reportError = useCallback(
@@ -73,10 +89,13 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
       // Wiersza juz nie ma (odmontowany, patrz cleanup nizej) - lokalny stan
       // bledu nie ma jak sie pokazac. Kanal w cache'u zapytan przezyje
       // odmontowanie i EditorPage go czyta, wiec to jedyne miejsce, gdzie ten
-      // blad moze jeszcze dotrzec do uzytkownika.
+      // blad moze jeszcze dotrzec do uzytkownika. Niezapisana zmiana i tak
+      // przepadla z punktu widzenia tego wiersza - dalsze sledzenie jej jako
+      // "brudnej" tylko zablokowaloby na stale podglad tego akapitu.
+      markDirty(false)
       queryClient.setQueryData<string | null>(['segments', 'save-error', chapterId], detail)
     },
-    [chapterId, queryClient],
+    [chapterId, markDirty, queryClient],
   )
 
   const mutation = useMutation({
@@ -103,7 +122,7 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
     (next: string) => {
       setValue(next)
       latest.current = next
-      dirty.current = true
+      markDirty(true)
       setState('dirty')
 
       if (null !== previewTimer.current) {
@@ -137,7 +156,7 @@ export function useSegmentEditor({ segment, chapterId, onPreview }: Options) {
         mutation.mutate({ text: next })
       }, SAVE_DELAY_MS)
     },
-    [mutation, onPreview, segment.id, segment.previewPlaceholders, segment.sourceText],
+    [markDirty, mutation, onPreview, segment.id, segment.previewPlaceholders, segment.sourceText],
   )
 
   useEffect(() => {

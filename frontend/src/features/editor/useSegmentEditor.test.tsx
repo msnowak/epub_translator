@@ -39,6 +39,34 @@ describe('useSegmentEditor', () => {
     vi.useRealTimers()
   })
 
+  it('reports itself dirty while typing and clean again once the save lands', async () => {
+    const onDirtyChange = vi.fn()
+
+    server.use(
+      http.patch(`${API}/api/segments/seg-1`, () =>
+        HttpResponse.json({ ...segment, translatedText: 'Nowe [1]słowo[/1].', status: 'edited' }),
+      ),
+    )
+
+    const { result } = renderHook(
+      () => useSegmentEditor({ segment, chapterId: 'ch-1', onPreview: vi.fn(), onDirtyChange }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.change('Nowe [1]słowo[/1].')
+    })
+
+    expect(onDirtyChange).toHaveBeenCalledWith('seg-1', true)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800)
+    })
+
+    expect(result.current.state).toBe('saved')
+    expect(onDirtyChange).toHaveBeenLastCalledWith('seg-1', false)
+  })
+
   it('shows the change in the preview before it saves it', async () => {
     const preview = vi.fn()
     const saved: string[] = []

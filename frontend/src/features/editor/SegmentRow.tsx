@@ -18,10 +18,11 @@ interface Props {
   onPreview: (segmentId: string, html: string) => void
   onActivate: (segmentId: string) => void
   onRetranslate: (segmentId: string) => void
+  onDirtyChange: (segmentId: string, dirty: boolean) => void
 }
 
-export function SegmentRow({ segment, chapterId, active, onPreview, onActivate, onRetranslate }: Props) {
-  const { value, state, message, change } = useSegmentEditor({ segment, chapterId, onPreview })
+export function SegmentRow({ segment, chapterId, active, onPreview, onActivate, onRetranslate, onDirtyChange }: Props) {
+  const { value, state, message, change } = useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange })
   const failed = 'failed' === segment.status
 
   return (

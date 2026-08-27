@@ -58,6 +58,7 @@ function renderList(
       onPreview={vi.fn()}
       onActivate={onActivate}
       onRetranslate={vi.fn()}
+      onDirtyChange={vi.fn()}
     />,
     { wrapper: Wrapper },
   )
@@ -125,6 +126,7 @@ describe('SegmentList', () => {
         onPreview={vi.fn()}
         onActivate={vi.fn()}
         onRetranslate={vi.fn()}
+        onDirtyChange={vi.fn()}
       />,
     )
 
