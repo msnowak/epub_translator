@@ -74,7 +74,7 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
     {
         return match ($exception->reason) {
             TranslationRejectionReason::Empty => 'Podaj treść tłumaczenia.',
-            TranslationRejectionReason::TokenIntegrity => 'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał, w tej samej liczbie.',
+            TranslationRejectionReason::TokenIntegrity => 'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał, prawidłowo zagnieżdżone.',
             // validate() nigdy nie zglasza echa - sprawdza je wylacznie
             // assertNotEchoed(), ktorej ten procesor celowo nie wola. Gdyby
             // kiedys ta galaz stala sie osiagalna, cichy komunikat o zetonach
