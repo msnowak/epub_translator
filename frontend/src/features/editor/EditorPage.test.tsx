@@ -448,6 +448,24 @@ describe('EditorPage', () => {
     })
   })
 
+  it('shows a keepalive save failure written to the query cache as a banner', async () => {
+    // useSegmentEditor pisze tu (['segments', 'save-error', chapterId]) kiedy
+    // zapis przy odmontowaniu wiersza sie nie uda - nie ma juz komu pokazac
+    // bledu lokalnie (patrz przeglad stage 7, finding 2). EditorPage ma
+    // czytac ten sam klucz i pokazac go jako baner.
+    const { queryClient } = renderEditor()
+
+    await screen.findByText('A [1]word[/1].')
+
+    expect(screen.queryByText('Coś poszło nie tak.')).not.toBeInTheDocument()
+
+    queryClient.setQueryData(['segments', 'save-error', 'ch-1'], 'Coś poszło nie tak.')
+
+    await waitFor(() => {
+      expect(screen.getByText('Coś poszło nie tak.')).toBeInTheDocument()
+    })
+  })
+
   it('reloads both the paragraph list and the preview from the banner button', async () => {
     // Obie kolumny czytaja ten sam rozdzial - klikniecie "Wczytaj ponownie" ma
     // odswiezyc obie, nie tylko liste akapitow (patrz przeglad stage 7,

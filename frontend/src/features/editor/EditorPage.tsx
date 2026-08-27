@@ -85,6 +85,19 @@ export function EditorPage() {
 
   const retranslation = useRetranslation(chapterId, retranslationPreview)
 
+  const saveError = useQuery({
+    // Klucz obejmuje chapterId: przejscie do innego rozdzialu ma zaczac z
+    // czystym banerem, a nie ciagnac za soba blad zapisu sprzed przejscia.
+    queryKey: ['segments', 'save-error', chapterId],
+    queryFn: () => null as string | null,
+    initialData: null,
+    // Ta "kolejka" nigdy nie ma wlasnego zapytania sieciowego - to kanal, przez
+    // ktory useSegmentEditor pisze blad zapisu po odmontowaniu wiersza (patrz
+    // reportError() tam), a strona go tu tylko czyta. staleTime: Infinity
+    // powstrzymuje refetchQuery przed wywolaniem tej pustej queryFn.
+    staleTime: Infinity,
+  })
+
   // Aktywacja przychodzi z dwoch bardzo roznych miejsc: fokus na polu
   // tekstowym wiersza (uzytkownik juz na niego patrzy - przewijanie listy
   // byloby co najmniej bezcelowe, a w trakcie pisania wrecz przeszkadzalo -
@@ -180,6 +193,8 @@ export function EditorPage() {
               </Button>
             </div>
           ) : null}
+
+          {null !== saveError.data ? <p className="text-sm text-red-600">{saveError.data}</p> : null}
 
           <Button size="sm" variant={onlyFailed ? 'default' : 'outline'} onClick={() => setOnlyFailed(!onlyFailed)}>
             {onlyFailed ? 'Wszystkie akapity' : 'Tylko nieudane'}
