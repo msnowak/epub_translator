@@ -27,6 +27,10 @@ services:
       DATABASE_URL: "postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8"
       MESSENGER_TRANSPORT_DSN: "doctrine://default?auto_setup=0"
       APP_STORAGE_DIR: /app/var/storage
+      # Adres API widziany z PRZEGLADARKI - ten sam, ktory dostaje front.
+      # Wchodzi do polityki CSP dokumentu podgladu: dokument srcdoc dziedziczy
+      # origin SPA, a zasoby ksiazki wskazuja tutaj, wiec 'self' by je zablokowal.
+      APP_PUBLIC_API_URL: ${VITE_API_URL:-http://localhost:8000}
       JWT_PASSPHRASE: ${JWT_PASSPHRASE:-change-me}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}

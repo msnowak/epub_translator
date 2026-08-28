@@ -9,6 +9,7 @@
 parameters:
     app.storage_dir: '%env(APP_STORAGE_DIR)%'
     app.refresh_cookie_secure: '%env(bool:REFRESH_COOKIE_SECURE)%'
+    app.public_api_url: '%env(APP_PUBLIC_API_URL)%'
 
 services:
     # default configuration for services in *this* file
@@ -45,6 +46,10 @@ services:
     App\Security\RefreshTokenManager:
         arguments:
             $secureCookie: '%app.refresh_cookie_secure%'
+
+    App\Preview\PreviewDecorator:
+        arguments:
+            $apiOrigin: '%app.public_api_url%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

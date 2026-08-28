@@ -15,6 +15,7 @@ final readonly class PreviewDecorator
 {
     public function __construct(
         private ElementSanitizer $sanitizer,
+        private string $apiOrigin,
     ) {
     }
 
@@ -45,6 +46,52 @@ final readonly class PreviewDecorator
 
             $this->sanitizer->sanitize($element, $projectId, $base);
         }
+
+        $this->injectPolicy($document);
+    }
+
+    /**
+     * The chapter reaches the browser through srcdoc, so the response header
+     * the preview endpoint sets never applies to it - a srcdoc document
+     * inherits the parent's policy and carries none of its own. A meta tag
+     * does apply, which makes this the only way the policy binds at all.
+     */
+    private function injectPolicy(\DOMDocument $document): void
+    {
+        $head = $document->getElementsByTagName('head')->item(0);
+
+        if (!$head instanceof \DOMElement) {
+            return;
+        }
+
+        // createElementNS, nie createElement: dokument jedzie przez loadXML,
+        // wiec element bez przestrzeni nazw wyszedlby jako <meta xmlns="">.
+        $meta = $document->createElementNS($head->namespaceURI, 'meta');
+        $meta->setAttribute('http-equiv', 'Content-Security-Policy');
+        $meta->setAttribute('content', $this->policy());
+
+        // Polityka obowiazuje dla tresci sparsowanej PO niej, wiec idzie na
+        // sam poczatek glowy dokumentu.
+        $head->insertBefore($meta, $head->firstChild);
+    }
+
+    /**
+     * No 'self': a srcdoc document with allow-same-origin inherits the parent
+     * origin (the SPA), while the frontend rewrites every asset path onto the
+     * API origin. 'self' would block the book's own images. Neither sandbox
+     * nor frame-ancestors appear - a meta tag cannot carry them, and the
+     * iframe's sandbox attribute covers the first one anyway.
+     */
+    private function policy(): string
+    {
+        return implode('; ', [
+            "default-src 'none'",
+            \sprintf('img-src %s data:', $this->apiOrigin),
+            \sprintf("style-src %s 'unsafe-inline'", $this->apiOrigin),
+            \sprintf('font-src %s data:', $this->apiOrigin),
+            "base-uri 'none'",
+            "form-action 'none'",
+        ]);
     }
 
     /**
