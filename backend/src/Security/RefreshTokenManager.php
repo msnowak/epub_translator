@@ -75,16 +75,24 @@ final readonly class RefreshTokenManager
     }
 
     /**
-     * Deletes the stored token and returns a cookie that clears the browser's.
-     * Both cookies are built in this class so their attributes cannot drift
-     * apart - a clearing cookie with a different path clears nothing.
+     * Ends every session of the token's owner and returns a cookie that clears
+     * the browser's. Both cookies are built in this class so their attributes
+     * cannot drift apart - a clearing cookie with a different path clears
+     * nothing.
      */
     public function revoke(?string $plainToken): Cookie
     {
         if (null !== $plainToken && '' !== $plainToken) {
-            // Bez sprawdzania, czy cokolwiek skasowano: wylogowanie ma byc
-            // idempotentne, a token juz zuzyty to nie blad uzytkownika.
-            $this->repository->deleteByHash($this->hash($plainToken));
+            $token = $this->repository->findOneByHash($this->hash($plainToken));
+
+            // Wylogowanie konczy wszystkie sesje uzytkownika, nie tylko te
+            // z przegladarki, ktora kliknela przycisk. Tozsamosc bierze sie
+            // z samego ciasteczka, wiec dziala takze wtedy, gdy JWT juz
+            // wygasl. Bez sprawdzania, czy cokolwiek skasowano: wylogowanie
+            // ma byc idempotentne, a token juz zuzyty to nie blad uzytkownika.
+            if (null !== $token) {
+                $this->repository->deleteAllForUser($token->getUser());
+            }
         }
 
         return Cookie::create(self::COOKIE_NAME, '')

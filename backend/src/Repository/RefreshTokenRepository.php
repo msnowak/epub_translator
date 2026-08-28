@@ -38,4 +38,17 @@ final class RefreshTokenRepository extends ServiceEntityRepository
             ->getQuery()
             ->execute();
     }
+
+    /**
+     * Ends every session of that user. Returns the number of deleted rows.
+     */
+    public function deleteAllForUser(User $user): int
+    {
+        return (int) $this->createQueryBuilder('t')
+            ->delete()
+            ->where('t.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->execute();
+    }
 }

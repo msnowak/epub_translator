@@ -52,12 +52,52 @@ final class LogoutTest extends ApiTestCase
         self::assertResponseStatusCodeSame(204);
     }
 
-    private function login(): void
+    public function testLoggingOutEndsEverySessionOfThatUser(): void
     {
         $this->createUser('reader@example.com');
 
+        // Dwa logowania to dwie sesje tego samego uzytkownika - druga
+        // przegladarka, telefon, cokolwiek. Wylogowanie ma zamknac obie.
+        $this->authenticateAs();
+        $this->authenticateAs();
+
+        $repository = self::getContainer()->get(RefreshTokenRepository::class);
+        self::assertCount(2, $repository->findAll());
+
+        $this->request('DELETE', '/api/token/refresh');
+
+        self::assertResponseStatusCodeSame(204);
+        self::assertCount(0, $repository->findAll());
+    }
+
+    public function testLoggingOutLeavesOtherUsersAlone(): void
+    {
+        $this->createUser('other@example.com');
+        $this->authenticateAs('other@example.com');
+
+        $this->createUser('reader@example.com');
+        $this->authenticateAs();
+
+        $this->request('DELETE', '/api/token/refresh');
+
+        $repository = self::getContainer()->get(RefreshTokenRepository::class);
+
+        self::assertCount(1, $repository->findAll());
+    }
+
+    private function login(): void
+    {
+        $this->createUser('reader@example.com');
+        $this->authenticateAs();
+    }
+
+    // Named authenticateAs(), not authenticate(): ApiTestCase already declares
+    // a protected authenticate(User $user): string that mints a bare JWT with
+    // no HTTP call at all, and every other test file relies on that one.
+    private function authenticateAs(string $email = 'reader@example.com'): void
+    {
         $this->request('POST', '/api/login_check', [
-            'email' => 'reader@example.com',
+            'email' => $email,
             'password' => UserFactory::DEFAULT_PASSWORD,
         ]);
 
