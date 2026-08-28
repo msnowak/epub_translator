@@ -19,6 +19,7 @@ services:
     build:
       context: ./backend
       target: dev
+    profiles: ["dev"]
     depends_on:
       db:
         condition: service_healthy
@@ -53,6 +54,7 @@ services:
     build:
       context: ./backend
       target: dev
+    profiles: ["dev"]
     depends_on:
       db:
         condition: service_healthy
@@ -72,9 +74,57 @@ services:
       replicas: ${TRANSLATION_WORKERS:-1}
     restart: unless-stopped
 
+  backend-prod:
+    build:
+      context: ./backend
+      target: prod
+    profiles: ["prod"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: &backend_prod_env
+      <<: *backend_env
+      APP_ENV: prod
+      # Domyslnie wlaczone, bo produkcja powinna stac za TLS-em. Serwujac po
+      # zwyklym HTTP pod adresem innym niz localhost ustaw 0 w .env, inaczej
+      # przegladarka odrzuci ciasteczko i sesja urwie sie po wygasnieciu JWT.
+      REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-1}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      # Bez bind mountu ./backend - kod siedzi w obrazie. Zostaja tylko dane:
+      # wgrane ksiazki i klucze JWT, ktorych w obrazie byc nie moze.
+      - storage:/app/var/storage
+      - jwt_keys:/app/config/jwt
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  worker-prod:
+    build:
+      context: ./backend
+      target: prod
+    profiles: ["prod"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *backend_prod_env
+    command: php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
+    healthcheck:
+      disable: true
+    volumes:
+      - storage:/app/var/storage
+      - jwt_keys:/app/config/jwt
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      replicas: ${TRANSLATION_WORKERS:-1}
+    restart: unless-stopped
+
   frontend:
     image: node:22-alpine
     working_dir: /app
+    profiles: ["dev"]
     environment:
       # Adres API widziany z PRZEGLADARKI, nie z kontenera - to przegladarka
       # wysyla te zadania. Musi byc ta sama nazwa hosta co w adresie SPA:
@@ -95,3 +145,4 @@ volumes:
   database_data:
   storage:
   frontend_node_modules:
+  jwt_keys:
