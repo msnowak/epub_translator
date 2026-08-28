@@ -17,6 +17,37 @@ the result as an EPUB that opens in a reader.
 - An [Ollama](https://ollama.com/) server reachable from the host, with at
   least one model pulled (e.g. `ollama pull llama3.1:8b`)
 
+## Configuring Ollama
+
+The backend and worker containers talk to Ollama over `OLLAMA_BASE_URL`
+(`.env`), which defaults to `http://host.docker.internal:11434` rather than
+`http://localhost:11434` - from inside a container, `localhost` names the
+container itself, not the host machine. Ollama's own default bind,
+`127.0.0.1`, only accepts connections from the host it runs on, so it also
+has to be started with `OLLAMA_HOST=0.0.0.0:11434` (or whatever port
+`OLLAMA_BASE_URL` names) before a container can reach it at all.
+
+The rest of the Ollama configuration, all in `.env`:
+
+- `OLLAMA_DEFAULT_MODEL` - offered as the default in the project wizard; it
+  has to already be pulled.
+- `OLLAMA_TIMEOUT` - seconds to wait for one translation request before it
+  counts as a failed attempt.
+- `OLLAMA_TEMPERATURE` - sampling temperature sent on every request.
+- `OLLAMA_API_KEY` - bearer token for a proxied or remote Ollama; leave it
+  empty for a plain local one.
+
+Verify the whole path with:
+
+```bash
+docker compose exec backend php bin/console app:ollama:ping
+```
+
+On success it prints the configured address and lists the models Ollama
+reports as available. On failure it prints a numbered checklist (server
+running? external interface? firewall? correct `OLLAMA_BASE_URL`?) instead of
+a bare connection error.
+
 ## Bootstrap
 
 Run these from the repository root, in order.
@@ -44,6 +75,12 @@ docker compose exec backend php bin/console doctrine:migrations:migrate --no-int
 Until step 3 completes, the `worker` container will crash-loop (it runs the
 same image and needs the same vendor/ directory).
 
+`backend` and `worker` build from the same Dockerfile target but are still
+two separate images, so `docker compose build backend` alone leaves `worker`
+on a stale one - the same applies to `backend-prod`/`worker-prod` in the
+production profile. Run `docker compose build` with no service argument to
+rebuild both together.
+
 `docker compose up -d` also starts the `frontend` container, which installs
 its npm dependencies into a named volume on first start. That takes a minute
 or two, and the page is not served until it finishes:
@@ -54,10 +91,61 @@ docker compose logs -f frontend
 
 The interface is then at `http://localhost:5173`, the API at
 `http://localhost:8000/api`, and the OpenAPI docs at
-`http://localhost:8000/api/docs` (those docs describe the API Platform
-resources only - `/api/me`, `/api/token/refresh`, `/api/ollama/models`, the
-preview, the assets and the download endpoint are plain Symfony controllers
-and do not appear there; `php bin/console debug:router` lists everything).
+`http://localhost:8000/api/docs`. Six endpoints - the preview, the assets and
+the download endpoint, plus `/api/me`, `/api/token/refresh` and
+`/api/ollama/models` - are plain Symfony controllers rather than API Platform
+resources, so API Platform cannot discover them on its own; an
+`OpenApiFactoryInterface` decorator (`App\OpenApi\UndocumentedRoutesFactory`)
+adds them to the document by hand, so `/api/docs` describes the whole API.
+
+## Running the production profile
+
+A built frontend and backend, with no development dependencies - not TLS, a
+reverse proxy, or any orchestration; put those in front of it yourself before
+exposing it beyond your own machine.
+
+```bash
+docker compose --profile prod up -d --build
+```
+
+`--profile prod` overrides `COMPOSE_PROFILES` rather than adding to it, which
+is exactly what makes this bring up only `db`, `backend-prod`, `worker-prod`
+and `frontend-prod` - the `dev` services stay down. It publishes the same
+host ports as the development profile (8000 and 5173), so the two profiles
+cannot run at the same time; stop one before starting the other. Note also
+that `docker compose --profile prod down` stops `db` along with the rest -
+expected, since `db` deliberately carries no profile of its own and belongs
+to both.
+
+Two steps are deliberately manual, both one-time (or one-time per volume):
+
+```bash
+# The JWT signing keypair lives in the jwt_keys named volume, not on disk in
+# the image - there is no bind mount in this profile, and the keys must not
+# be baked into it.
+docker compose --profile prod exec backend-prod php bin/console lexik:jwt:generate-keypair --skip-if-exists
+
+# Migrations are not run automatically on container start: with
+# TRANSLATION_WORKERS > 1, every replica starting at once would race to
+# apply the same migration.
+docker compose --profile prod exec backend-prod php bin/console doctrine:migrations:migrate -n
+```
+
+**`REFRESH_COOKIE_SECURE`.** The production profile defaults this to `1`
+(`REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-1}` in `compose.yaml`), so
+the refresh-token cookie is only ever sent over TLS - the right default for a
+production deployment. Serving over plain HTTP under a hostname other than
+`localhost` is the one case where that default breaks the app: set
+`REFRESH_COOKIE_SECURE=0` in `.env` for it, or the browser silently drops the
+cookie and the session ends the moment the access token expires. The
+substitution only falls back to `1` for a variable that is genuinely absent
+from `.env`, so leave the line out (or commented, as in `.env.example`)
+everywhere else rather than setting it to an empty value.
+
+**`VITE_API_URL` is baked into the frontend image at build time** - Vite
+resolves it while bundling, not while the container runs - so changing it
+needs `docker compose --profile prod up -d --build` again, not just a
+restart.
 
 ## Downloading the translated book
 
@@ -204,7 +292,55 @@ docker compose exec frontend npm run typecheck
 docker compose exec frontend npm run lint
 ```
 
+## Test coverage
+
+```bash
+docker compose exec backend composer coverage
+docker compose exec frontend npm run coverage
+```
+
+Both instrument the same test suites `composer test` and `npm run test` run -
+`composer coverage` swaps in pcov, `npm run coverage` swaps in v8 - and write
+an HTML report to `backend/var/coverage` and `frontend/coverage`
+respectively; open `index.html` in either to browse per-file detail. As last
+measured on this branch: backend 93.18% lines, 80.95% methods, 43.58%
+classes; frontend 94.19% statements, 81.33% branches, 94.44% functions, 94.2%
+lines. Neither number is enforced as a gate - there is no CI here to stop a
+commit that drops it, so a threshold would only be decorative.
+
+## Known limitations
+
+Each of these is a decision this stage made deliberately, not an oversight:
+
+- **No end-to-end tests in a real browser.** A conscious scope decision for
+  this stage - the manual walkthrough documented in
+  [`docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md`](docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md)
+  stands in for it, and the final pass before merging to `master` is manual
+  too.
+- **`TranslatedEpubBuilder` builds the whole book in memory and issues one
+  segment query per segment.** Fine for the books this has been tested
+  against; a very large book's export could exceed the request time limit.
+- **Nothing checks that the model's answer is in the target language.**
+  `TranslationValidator` polices the formatting tokens only, not the
+  language of the text between them.
+- **An export file left on disk survives an interrupted download.** Nothing
+  cleans it up if the client disconnects mid-transfer.
+- **`InlineTokenizer::detokenize()` and its TypeScript port
+  (`frontend/src/features/editor/detokenize.ts`) share no test suite.** A
+  behavioral drift between the two would not be caught automatically by
+  either side's tests.
+- **`GET /api/projects/{id}` reports zero progress counters.** The provider
+  that fills `segmentCounts` and `totalSegments` at read time is wired only
+  to the collection endpoint, not the single-project one.
+- Smaller items are catalogued in the
+  [stage 8 input debt note](docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md).
+
 ## Troubleshooting
+
+**`docker compose up` starts only the database.** Your `.env` predates the
+production profile and has no `COMPOSE_PROFILES` line. Every service except
+`db` now belongs to a profile, so with none selected nothing else comes up.
+Add `COMPOSE_PROFILES=dev` to `.env` (it is in `.env.example`).
 
 **Logging in works, but reloading the page throws you back to the login
 screen.** The access token lives in memory only, so after a reload the app
@@ -215,19 +351,10 @@ SPA on `http://localhost:5173`, the API has to be `http://localhost:8000`, not
 `http://127.0.0.1:8000`. The browser silently drops the cookie otherwise, and
 the only symptom is a `401` from `/api/token/refresh`.
 
-**Ollama is unreachable from the container.** `OLLAMA_BASE_URL` in `.env`
-defaults to `http://host.docker.internal:11434`, but by default Ollama binds
-to `127.0.0.1`, which is only reachable from the host itself, not from inside
-a container. Start Ollama with `OLLAMA_HOST=0.0.0.0:11434` (or whatever port
-you use) so it listens on an external interface. Diagnose connectivity with:
-
-```bash
-docker compose exec backend php bin/console app:ollama:ping
-```
-
-This reports the configured address, lists available models on success, and
-prints a numbered checklist (server running? external interface? firewall?
-correct `OLLAMA_BASE_URL`?) on failure.
+**Ollama is unreachable from the container.** See "Configuring Ollama" above
+for the host/bind-address requirement (`OLLAMA_HOST=0.0.0.0:11434`) and
+`app:ollama:ping` for a diagnosis - its checklist covers the same failure
+modes this entry used to spell out.
 
 **Checking how the model handles a paragraph.** Translation quality and, more
 importantly, whether the model preserves the formatting tokens that carry the
