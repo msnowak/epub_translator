@@ -91,9 +91,9 @@ final class LogoutTest extends ApiTestCase
         $this->authenticateAs();
     }
 
-    // Named authenticateAs(), not authenticate(): ApiTestCase already declares
-    // a protected authenticate(User $user): string that mints a bare JWT with
-    // no HTTP call at all, and every other test file relies on that one.
+    // Nazwane authenticateAs(), nie authenticate(): ApiTestCase juz deklaruje
+    // protected authenticate(User $user): string, ktore wystawia gole JWT bez
+    // zadnego wywolania HTTP, i kazdy inny plik testowy polega wlasnie na tym.
     private function authenticateAs(string $email = 'reader@example.com'): void
     {
         $this->request('POST', '/api/login_check', [
