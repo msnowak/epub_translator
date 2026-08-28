@@ -141,6 +141,22 @@ services:
       - frontend_node_modules:/app/node_modules
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
 
+  frontend-prod:
+    build:
+      context: ./frontend
+      target: prod
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    profiles: ["prod"]
+    environment:
+      # Caddy rozwija to przy starcie, wiec zmiana adresu API w polityce CSP
+      # nie wymaga przebudowania obrazu - w odroznieniu od VITE_API_URL wyzej,
+      # ktore siedzi juz w bundlu.
+      API_ORIGIN: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    restart: unless-stopped
+
 volumes:
   database_data:
   storage:
