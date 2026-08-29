@@ -16,6 +16,7 @@ final readonly class PlaceholderSanitizer
 {
     public function __construct(
         private ElementSanitizer $sanitizer,
+        private AssetUrlRewriter $rewriter,
         private InlineTokenizer $tokenizer,
     ) {
     }
@@ -33,7 +34,7 @@ final readonly class PlaceholderSanitizer
             return [];
         }
 
-        $base = $this->sanitizer->baseFor($chapterHref);
+        $base = $this->rewriter->baseFor($chapterHref);
         $safe = [];
 
         foreach ($placeholders as $number => $markup) {

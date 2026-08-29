@@ -81,6 +81,33 @@ final class OpenApiTest extends ApiTestCase
     }
 
     /**
+     * @return list<array{string, string}>
+     */
+    public static function routesOutsideApiPlatform(): array
+    {
+        return [
+            ['/api/projects/{id}/preview/{chapterId}', 'get'],
+            ['/api/projects/{id}/assets/{path}', 'get'],
+            ['/api/projects/{id}/download', 'get'],
+            ['/api/me', 'get'],
+            ['/api/token/refresh', 'post'],
+            ['/api/token/refresh', 'delete'],
+            ['/api/ollama/models', 'get'],
+        ];
+    }
+
+    #[DataProvider('routesOutsideApiPlatform')]
+    public function testPlainControllersAreDocumentedToo(string $path, string $method): void
+    {
+        $operation = $this->openApi()['paths'][$path][$method] ?? null;
+
+        // Te trasy to zwykle kontrolery Symfony - API Platform nie wie o nich
+        // nic, wiec bez dekoratora dokument milczy o polowie API.
+        self::assertIsArray($operation, \sprintf('The OpenAPI document has no %s %s.', strtoupper($method), $path));
+        self::assertNotSame('', $operation['summary'] ?? '');
+    }
+
+    /**
      * @return array{paths: array<string, array<string, array<string, mixed>>>}
      */
     private function openApi(): array

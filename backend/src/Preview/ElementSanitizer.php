@@ -23,19 +23,8 @@ final readonly class ElementSanitizer
     public const array EXECUTABLE_TAGS = ['script', 'iframe', 'object', 'embed'];
 
     public function __construct(
-        private AssetUrlSigner $signer,
+        private AssetUrlRewriter $rewriter,
     ) {
-    }
-
-    /**
-     * Addresses inside a book are relative to the chapter file, not to the root
-     * of the zip.
-     */
-    public function baseFor(string $chapterHref): string
-    {
-        $base = \dirname($chapterHref);
-
-        return '.' === $base ? '' : $base;
     }
 
     /** True for elements that must not survive in the preview at all. */
@@ -114,7 +103,7 @@ final readonly class ElementSanitizer
                 continue;
             }
 
-            $rewritten = $this->rewrite($attribute->value, $projectId, $base);
+            $rewritten = $this->rewriter->rewrite($attribute->value, $projectId, $base);
 
             if (null === $rewritten) {
                 continue;
@@ -125,82 +114,5 @@ final readonly class ElementSanitizer
             // od DOMAttr::$value poprawnie escape'uje wartosc.
             $element->setAttributeNS($attribute->namespaceURI, $attribute->nodeName, $rewritten);
         }
-    }
-
-    private function rewrite(string $value, string $projectId, string $base): ?string
-    {
-        $trimmed = trim($value);
-
-        if ('' === $trimmed
-            || str_starts_with($trimmed, '#')
-            || str_starts_with($trimmed, '//')
-            || str_starts_with($trimmed, 'data:')
-            || preg_match('#^[a-zA-Z][a-zA-Z0-9+.-]*:#', $trimmed)
-        ) {
-            // Kotwice i adresy bezwzgledne nie wskazuja na wnetrze ksiazki.
-            return null;
-        }
-
-        [$path, $fragment] = $this->splitFragment($trimmed);
-        $resolved = $this->resolveAgainst($base, $path);
-
-        return \sprintf(
-            '/api/projects/%s/assets/%s?t=%s',
-            $projectId,
-            $this->encodePath($resolved),
-            $this->signer->sign($projectId, $resolved),
-        ).$fragment;
-    }
-
-    /**
-     * @return array{string, string}
-     */
-    private function splitFragment(string $value): array
-    {
-        $hash = strpos($value, '#');
-
-        return false === $hash
-            ? [$value, '']
-            : [substr($value, 0, $hash), substr($value, $hash)];
-    }
-
-    // Adresy w ksiazce sa wzgledem pliku rozdzialu, a nie korzenia zipa -
-    // bez tego "images/cover.png" z OEBPS/ch1.xhtml szukaloby obrazu
-    // w korzeniu i nie znalazloby go.
-    private function resolveAgainst(string $base, string $path): string
-    {
-        $segments = '' === $base ? [] : explode('/', $base);
-
-        foreach (explode('/', ltrim($path, '/')) as $segment) {
-            // Router Symfony dekoduje cala sciezke przed dopasowaniem trasy,
-            // wiec kontroler widzi nazwe pliku w postaci zdekodowanej.
-            // Podpisujemy dokladnie ta postac - inaczej ksiazka z poprawnie
-            // zakodowana spacja dostawalaby 403. Dekodujemy segment po
-            // segmencie, tak samo jak EpubReader czyta manifest, zeby obie
-            // strony mialy te sama sciezke. Bariera to nie jest: "%2F" po
-            // zdekodowaniu jest ukosnikiem jak kazdy inny, a o tym, co wolno
-            // wydac, decyduje manifest sprawdzany przez AssetPathResolver.
-            $segment = rawurldecode($segment);
-
-            if ('' === $segment || '.' === $segment) {
-                continue;
-            }
-
-            if ('..' === $segment) {
-                array_pop($segments);
-
-                continue;
-            }
-
-            $segments[] = $segment;
-        }
-
-        return implode('/', $segments);
-    }
-
-    private function encodePath(string $path): string
-    {
-        // Kodujemy segmenty, nie ukosniki: sciezka ma zostac sciezka.
-        return implode('/', array_map(rawurlencode(...), explode('/', $path)));
     }
 }

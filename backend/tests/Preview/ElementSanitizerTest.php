@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Preview;
 
+use App\Preview\AssetUrlRewriter;
 use App\Preview\AssetUrlSigner;
 use App\Preview\ElementSanitizer;
 use PHPUnit\Framework\TestCase;
@@ -11,14 +12,6 @@ use PHPUnit\Framework\TestCase;
 final class ElementSanitizerTest extends TestCase
 {
     private const string PROJECT = '01920000-0000-7000-8000-000000000000';
-
-    public function testResolvesTheBaseAgainstTheChapterDirectory(): void
-    {
-        $sanitizer = $this->sanitizer();
-
-        self::assertSame('OEBPS', $sanitizer->baseFor('OEBPS/ch1.xhtml'));
-        self::assertSame('', $sanitizer->baseFor('ch1.xhtml'));
-    }
 
     public function testRecognisesWhatMustNotSurviveInThePreview(): void
     {
@@ -63,7 +56,7 @@ final class ElementSanitizerTest extends TestCase
 
     private function sanitizer(): ElementSanitizer
     {
-        return new ElementSanitizer(new AssetUrlSigner('sekret'));
+        return new ElementSanitizer(new AssetUrlRewriter(new AssetUrlSigner('sekret')));
     }
 
     private function element(string $markup): \DOMElement

@@ -18,12 +18,12 @@ use Symfony\Component\Uid\Uuid;
 final class ChapterPreviewController
 {
     /**
-     * The chapter is book content served as a document from our own origin, so
-     * it needs a policy of its own. It cannot be the one the assets endpoint
-     * uses: the preview has to load the book's images and stylesheets, which
-     * come back from that very endpoint. Nothing here grants scripts anything -
-     * an omitted directive falls back to default-src 'none' - and
-     * allow-same-origin is what keeps 'self' meaningful under the sandbox.
+     * Applies only when someone opens this URL directly as a document. The
+     * editor fetches the chapter with a token and injects it through srcdoc,
+     * and a srcdoc document inherits the parent's policy instead of this
+     * header - PreviewDecorator puts the policy that actually binds into the
+     * document itself. Kept because the direct-navigation case is real and
+     * costs nothing.
      */
     private const string CONTENT_SECURITY_POLICY = "default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'; sandbox allow-same-origin";
 

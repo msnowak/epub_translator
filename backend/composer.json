@@ -84,6 +84,11 @@
             "@php bin/console --env=test doctrine:migrations:migrate -n -q --allow-no-migration",
             "@php vendor/bin/phpunit"
         ],
+        "coverage": [
+            "@php bin/console --env=test doctrine:database:create --if-not-exists -q",
+            "@php bin/console --env=test doctrine:migrations:migrate -n -q --allow-no-migration",
+            "php -d pcov.enabled=1 vendor/bin/phpunit --coverage-text --coverage-html var/coverage"
+        ],
         "stan": "@php vendor/bin/phpstan analyse --memory-limit=512M"
     },
     "conflict": {

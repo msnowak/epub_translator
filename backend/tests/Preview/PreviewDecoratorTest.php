@@ -6,6 +6,7 @@ namespace App\Tests\Preview;
 
 use App\Epub\BlockExtractor;
 use App\Epub\XhtmlDocument;
+use App\Preview\AssetUrlRewriter;
 use App\Preview\AssetUrlSigner;
 use App\Preview\ElementSanitizer;
 use App\Preview\PreviewDecorator;
@@ -265,6 +266,104 @@ final class PreviewDecoratorTest extends TestCase
         self::assertStringNotContainsString('javascript:', $xhtml->save($document));
     }
 
+    public function testPutsThePolicyFirstInTheHead(): void
+    {
+        $xhtml = new XhtmlDocument();
+        $document = $xhtml->load($this->chapter('<p>One.</p>'));
+
+        $this->decorate($xhtml, $document, []);
+
+        $head = $document->getElementsByTagName('head')->item(0);
+
+        if (!$head instanceof \DOMElement) {
+            self::fail('The decorated chapter has no head element.');
+        }
+
+        $first = $head->firstElementChild;
+
+        if (!$first instanceof \DOMElement) {
+            self::fail('The head of the decorated chapter is empty.');
+        }
+
+        // Metatag obowiazuje tylko dla tresci sparsowanej po nim, wiec musi
+        // byc pierwszy - inaczej obrazek z <head> wymknalby sie polityce.
+        self::assertSame('meta', $first->localName);
+        self::assertSame('Content-Security-Policy', $first->getAttribute('http-equiv'));
+    }
+
+    public function testThePolicyLandsInTheXhtmlNamespace(): void
+    {
+        $xhtml = new XhtmlDocument();
+        $document = $xhtml->load($this->chapter('<p>One.</p>'));
+
+        $this->decorate($xhtml, $document, []);
+
+        // Dokument jedzie przez loadXML, wiec element bez przestrzeni nazw
+        // zserializowalby sie jako <meta xmlns=""> i przegladarka nie uznalaby
+        // go za XHTML-owy metatag.
+        self::assertStringNotContainsString('xmlns=""', $xhtml->save($document));
+    }
+
+    public function testThePolicyNamesTheApiOriginInsteadOfSelf(): void
+    {
+        $xhtml = new XhtmlDocument();
+        $document = $xhtml->load($this->chapter('<p><img src="images/cover.png"/></p>'));
+
+        $this->decorate($xhtml, $document, []);
+
+        $policy = $this->policyOf($document);
+
+        // Dokument srcdoc dziedziczy origin RODZICA (SPA), a obrazki wskazuja
+        // na origin API - 'self' zablokowaloby cala grafike ksiazki.
+        self::assertStringContainsString("img-src https://api.example data:", $policy);
+        self::assertStringNotContainsString("'self'", $policy);
+    }
+
+    public function testThePolicyOmitsDirectivesAMetaTagCannotCarry(): void
+    {
+        $xhtml = new XhtmlDocument();
+        $document = $xhtml->load($this->chapter('<p>One.</p>'));
+
+        $this->decorate($xhtml, $document, []);
+
+        $policy = $this->policyOf($document);
+
+        // Obie sa ignorowane w metatagu. Wpisane, obiecywalyby ochrone,
+        // ktorej ta droga nie daje - sandbox zapewnia atrybut iframe'a.
+        self::assertStringNotContainsString('sandbox', $policy);
+        self::assertStringNotContainsString('frame-ancestors', $policy);
+        self::assertStringContainsString("default-src 'none'", $policy);
+    }
+
+    public function testInjectsThePolicyEvenWithoutAHeadElement(): void
+    {
+        $xhtml = new XhtmlDocument();
+        $document = $xhtml->load(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            .'<html xmlns="http://www.w3.org/1999/xhtml"><body><p>One.</p></body></html>',
+        );
+
+        // loadXML() sprawdza tylko poprawnosc XML, nie schemat XHTML, wiec
+        // dokument bez <head> parsuje sie bez bledu i dociera tutaj bez glowy.
+        $this->decorate($xhtml, $document, []);
+
+        $policy = $this->policyOf($document);
+
+        self::assertStringContainsString("default-src 'none'", $policy);
+        self::assertStringNotContainsString('xmlns=""', $xhtml->save($document));
+    }
+
+    private function policyOf(\DOMDocument $document): string
+    {
+        foreach ($document->getElementsByTagName('meta') as $meta) {
+            if ('Content-Security-Policy' === $meta->getAttribute('http-equiv')) {
+                return $meta->getAttribute('content');
+            }
+        }
+
+        self::fail('The decorated chapter carries no content security policy.');
+    }
+
     /**
      * @param array<int, string> $segmentIdsByNodeIndex
      */
@@ -281,7 +380,9 @@ final class PreviewDecoratorTest extends TestCase
 
     private function decorator(): PreviewDecorator
     {
-        return new PreviewDecorator(new ElementSanitizer(new AssetUrlSigner('sekret')));
+        $rewriter = new AssetUrlRewriter(new AssetUrlSigner('sekret'));
+
+        return new PreviewDecorator(new ElementSanitizer($rewriter), $rewriter, 'https://api.example');
     }
 
     private function chapter(string $body): string

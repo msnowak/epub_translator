@@ -207,6 +207,25 @@ final class ChapterPreviewTest extends ApiTestCase
         self::assertStringNotContainsString('script-src', $policy);
     }
 
+    public function testTheRenderedChapterCarriesThePolicyInItsBody(): void
+    {
+        $owner = $this->createUser();
+        [$project, $chapter] = $this->projectWithChapter($owner, 'Przetłumaczony akapit.');
+
+        $this->request(
+            'GET',
+            '/api/projects/'.$project->getId().'/preview/'.$chapter->getId(),
+            token: $this->authenticate($owner),
+        );
+
+        self::assertResponseIsSuccessful();
+
+        $body = (string) $this->client->getResponse()->getContent();
+
+        self::assertStringContainsString('http-equiv="Content-Security-Policy"', $body);
+        self::assertStringNotContainsString('xmlns=""', $body);
+    }
+
     public function testTheContentPolicyIsAlsoOnTheErrorResponse(): void
     {
         $owner = $this->createUser('owner@example.com');

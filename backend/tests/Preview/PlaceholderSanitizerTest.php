@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Preview;
 
 use App\Epub\InlineTokenizer;
+use App\Preview\AssetUrlRewriter;
 use App\Preview\AssetUrlSigner;
 use App\Preview\ElementSanitizer;
 use App\Preview\PlaceholderSanitizer;
@@ -83,8 +84,11 @@ final class PlaceholderSanitizerTest extends TestCase
      */
     private function sanitize(array $placeholders): array
     {
+        $rewriter = new AssetUrlRewriter(new AssetUrlSigner('sekret'));
+
         $sanitizer = new PlaceholderSanitizer(
-            new ElementSanitizer(new AssetUrlSigner('sekret')),
+            new ElementSanitizer($rewriter),
+            $rewriter,
             new InlineTokenizer(),
         );
 

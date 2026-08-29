@@ -11,13 +11,17 @@ services:
       retries: 10
       start_period: 30s
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Tylko localhost - profil prod nie powinien wystawiac bazy na caly
+      # swiat, a hosta klienty baz danych i tak dzialaja przez 127.0.0.1.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - database_data:/var/lib/postgresql/data:rw
 
   backend:
     build:
       context: ./backend
+      target: dev
+    profiles: ["dev"]
     depends_on:
       db:
         condition: service_healthy
@@ -27,6 +31,13 @@ services:
       DATABASE_URL: "postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8"
       MESSENGER_TRANSPORT_DSN: "doctrine://default?auto_setup=0"
       APP_STORAGE_DIR: /app/var/storage
+      # Adres API widziany z PRZEGLADARKI - ten sam, ktory dostaje front.
+      # Wchodzi do polityki CSP dokumentu podgladu: dokument srcdoc dziedziczy
+      # origin SPA, a zasoby ksiazki wskazuja tutaj, wiec 'self' by je zablokowal.
+      APP_PUBLIC_API_URL: ${VITE_API_URL:-http://localhost:8000}
+      # Musi wedrowac razem z VITE_API_URL/adresem SPA - inaczej przegladarka
+      # odrzuca kazde zadanie do API juz na etapie preflightu CORS.
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:-^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$}
       JWT_PASSPHRASE: ${JWT_PASSPHRASE:-change-me}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
@@ -47,6 +58,8 @@ services:
   worker:
     build:
       context: ./backend
+      target: dev
+    profiles: ["dev"]
     depends_on:
       db:
         condition: service_healthy
@@ -66,9 +79,57 @@ services:
       replicas: ${TRANSLATION_WORKERS:-1}
     restart: unless-stopped
 
+  backend-prod:
+    build:
+      context: ./backend
+      target: prod
+    profiles: ["prod"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: &backend_prod_env
+      <<: *backend_env
+      APP_ENV: prod
+      # Domyslnie wlaczone, bo produkcja powinna stac za TLS-em. Serwujac po
+      # zwyklym HTTP pod adresem innym niz localhost ustaw 0 w .env, inaczej
+      # przegladarka odrzuci ciasteczko i sesja urwie sie po wygasnieciu JWT.
+      REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-1}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      # Bez bind mountu ./backend - kod siedzi w obrazie. Zostaja tylko dane:
+      # wgrane ksiazki i klucze JWT, ktorych w obrazie byc nie moze.
+      - storage:/app/var/storage
+      - jwt_keys:/app/config/jwt
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  worker-prod:
+    build:
+      context: ./backend
+      target: prod
+    profiles: ["prod"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *backend_prod_env
+    command: php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
+    healthcheck:
+      disable: true
+    volumes:
+      - storage:/app/var/storage
+      - jwt_keys:/app/config/jwt
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      replicas: ${TRANSLATION_WORKERS:-1}
+    restart: unless-stopped
+
   frontend:
     image: node:22-alpine
     working_dir: /app
+    profiles: ["dev"]
     environment:
       # Adres API widziany z PRZEGLADARKI, nie z kontenera - to przegladarka
       # wysyla te zadania. Musi byc ta sama nazwa hosta co w adresie SPA:
@@ -85,7 +146,24 @@ services:
       - frontend_node_modules:/app/node_modules
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
 
+  frontend-prod:
+    build:
+      context: ./frontend
+      target: prod
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    profiles: ["prod"]
+    environment:
+      # Caddy rozwija to przy starcie, wiec zmiana adresu API w polityce CSP
+      # nie wymaga przebudowania obrazu - w odroznieniu od VITE_API_URL wyzej,
+      # ktore siedzi juz w bundlu.
+      API_ORIGIN: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    restart: unless-stopped
+
 volumes:
   database_data:
   storage:
   frontend_node_modules:
+  jwt_keys:
