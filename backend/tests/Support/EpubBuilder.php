@@ -20,10 +20,16 @@ final class EpubBuilder
     private array $images = [];
 
     /** @var array<string, string> */
+    private array $stylesheets = [];
+
+    /** @var array<string, string> */
     private array $chapterManifestHrefs = [];
 
     /** @var array<string, string> */
     private array $imageManifestHrefs = [];
+
+    /** @var array<string, string> */
+    private array $stylesheetManifestHrefs = [];
 
     private bool $withContainerXml = true;
     private bool $corrupted = false;
@@ -64,6 +70,14 @@ final class EpubBuilder
     {
         $this->images[$href] = $binaryContent;
         $this->imageManifestHrefs[$href] = $manifestHref ?? $href;
+
+        return $this;
+    }
+
+    public function withStylesheet(string $href, string $css, ?string $manifestHref = null): self
+    {
+        $this->stylesheets[$href] = $css;
+        $this->stylesheetManifestHrefs[$href] = $manifestHref ?? $href;
 
         return $this;
     }
@@ -137,6 +151,16 @@ final class EpubBuilder
                 htmlspecialchars($this->imageManifestHrefs[$href], ENT_XML1),
             );
             $zip->addFromString('OEBPS/'.$href, $content);
+            ++$index;
+        }
+
+        foreach ($this->stylesheets as $href => $css) {
+            $manifest .= \sprintf(
+                '<item id="css%d" href="%s" media-type="text/css"/>',
+                $index,
+                htmlspecialchars($this->stylesheetManifestHrefs[$href], ENT_XML1),
+            );
+            $zip->addFromString('OEBPS/'.$href, $css);
             ++$index;
         }
 

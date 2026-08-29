@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Preview;
 
+use App\Preview\AssetUrlRewriter;
 use App\Preview\AssetUrlSigner;
 use App\Preview\ElementSanitizer;
 use PHPUnit\Framework\TestCase;
@@ -63,7 +64,7 @@ final class ElementSanitizerTest extends TestCase
 
     private function sanitizer(): ElementSanitizer
     {
-        return new ElementSanitizer(new AssetUrlSigner('sekret'));
+        return new ElementSanitizer(new AssetUrlRewriter(new AssetUrlSigner('sekret')));
     }
 
     private function element(string $markup): \DOMElement

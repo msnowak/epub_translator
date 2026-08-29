@@ -6,6 +6,7 @@ namespace App\Tests\Preview;
 
 use App\Epub\BlockExtractor;
 use App\Epub\XhtmlDocument;
+use App\Preview\AssetUrlRewriter;
 use App\Preview\AssetUrlSigner;
 use App\Preview\ElementSanitizer;
 use App\Preview\PreviewDecorator;
@@ -379,7 +380,10 @@ final class PreviewDecoratorTest extends TestCase
 
     private function decorator(): PreviewDecorator
     {
-        return new PreviewDecorator(new ElementSanitizer(new AssetUrlSigner('sekret')), 'https://api.example');
+        return new PreviewDecorator(
+            new ElementSanitizer(new AssetUrlRewriter(new AssetUrlSigner('sekret'))),
+            'https://api.example',
+        );
     }
 
     private function chapter(string $body): string

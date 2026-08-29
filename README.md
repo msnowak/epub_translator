@@ -369,6 +369,9 @@ Each of these is a decision this stage made deliberately, not an oversight:
 - **`GET /api/projects/{id}` reports zero progress counters.** The provider
   that fills `segmentCounts` and `totalSegments` at read time is wired only
   to the collection endpoint, not the single-project one.
+- **A bare-string `@import "file.css";` inside a stylesheet is not rewritten.**
+  `StylesheetRewriter` only signs addresses inside `url(...)`; a stylesheet
+  pulled in this way still fails to load through the preview.
 - Smaller items are catalogued in the
   [stage 8 input debt note](docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md).
 

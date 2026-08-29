@@ -9,6 +9,7 @@ use App\Epub\InvalidEpubException;
 use App\Http\ProblemResponse;
 use App\Preview\AssetPathResolver;
 use App\Preview\AssetUrlSigner;
+use App\Preview\StylesheetRewriter;
 use App\Repository\ProjectRepository;
 use App\Storage\ProjectStorage;
 use Symfony\Component\HttpFoundation\Request;
@@ -37,11 +38,22 @@ final class ProjectAssetController
         Request $request,
         AssetUrlSigner $signer,
         AssetPathResolver $resolver,
+        StylesheetRewriter $stylesheetRewriter,
         ProjectRepository $projects,
         ProjectStorage $storage,
         EpubReader $reader,
     ): Response {
-        $response = $this->respond($id, $path, $request, $signer, $resolver, $projects, $storage, $reader);
+        $response = $this->respond(
+            $id,
+            $path,
+            $request,
+            $signer,
+            $resolver,
+            $stylesheetRewriter,
+            $projects,
+            $storage,
+            $reader,
+        );
 
         // Naglowki ida na kazda odpowiedz, takze bledna: sciezka wyjscia
         // nie moze decydowac o tym, czy tresc z ksiazki wykona sie na naszej
@@ -59,6 +71,7 @@ final class ProjectAssetController
         Request $request,
         AssetUrlSigner $signer,
         AssetPathResolver $resolver,
+        StylesheetRewriter $stylesheetRewriter,
         ProjectRepository $projects,
         ProjectStorage $storage,
         EpubReader $reader,
@@ -92,7 +105,17 @@ final class ProjectAssetController
                 return ProblemResponse::create(Response::HTTP_NOT_FOUND, 'Nie znaleziono zasobu.');
             }
 
-            $response = new Response($package->read($resolved));
+            $content = $package->read($resolved);
+
+            // Podpisujemy dopiero to, co manifest juz przepuscil: wywolanie
+            // StylesheetRewriter idzie po resolve() powyzej, nigdy przed -
+            // odwrotna kolejnosc podpisywalaby sciezke, ktorej ksiazka
+            // wcale nie deklaruje.
+            if ('css' === $this->extension($resolved)) {
+                $content = $stylesheetRewriter->rewrite($content, $id, $resolved);
+            }
+
+            $response = new Response($content);
             $response->headers->set('Content-Type', $this->contentType($resolved));
             // Podpis i tak wygasa, a plik w ksiazce sie nie zmienia.
             $response->headers->set('Cache-Control', 'private, max-age=3600');
@@ -106,9 +129,14 @@ final class ProjectAssetController
         }
     }
 
+    private function extension(string $path): string
+    {
+        return strtolower(pathinfo($path, \PATHINFO_EXTENSION));
+    }
+
     private function contentType(string $path): string
     {
-        return match (strtolower(pathinfo($path, \PATHINFO_EXTENSION))) {
+        return match ($this->extension($path)) {
             'png' => 'image/png',
             'jpg', 'jpeg' => 'image/jpeg',
             'gif' => 'image/gif',

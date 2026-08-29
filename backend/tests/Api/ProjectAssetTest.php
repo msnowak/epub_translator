@@ -47,6 +47,27 @@ final class ProjectAssetTest extends ApiTestCase
         self::assertResponseHeaderSame('Content-Security-Policy', "default-src 'none'; sandbox");
     }
 
+    public function testSignsUrlsInsideAStylesheetToo(): void
+    {
+        $owner = $this->createUser();
+        $project = $this->projectWithStylesheet($owner);
+        $url = $this->signedUrl($project, 'OEBPS/styles/main.css');
+
+        $this->client->request('GET', $url);
+
+        self::assertResponseIsSuccessful();
+
+        $content = (string) $this->client->getResponse()->getContent();
+
+        // Wzgledem arkusza (OEBPS/styles/), nie wzgledem korzenia: to jest
+        // dokladnie ten blad, ktory StylesheetRewriter naprawia - przegladarka
+        // rozwiazuje url() wobec adresu samego arkusza.
+        self::assertMatchesRegularExpression(
+            '#/api/projects/'.preg_quote((string) $project->getId(), '#').'/assets/OEBPS/fonts/f\.ttf\?t=#',
+            $content,
+        );
+    }
+
     public function testServesChapterDocumentsAsPlainText(): void
     {
         $owner = $this->createUser();
@@ -128,6 +149,24 @@ final class ProjectAssetTest extends ApiTestCase
         $epubPath = EpubBuilder::create()
             ->withChapter('ch1.xhtml', '<p>A paragraph.</p><p><img src="images/cover.png"/></p>')
             ->withImage('images/cover.png', $png)
+            ->build();
+
+        $storage = self::getContainer()->get(ProjectStorage::class);
+        $project->setStoragePath($storage->store(new \SplFileInfo($epubPath), $project));
+
+        $entityManager->flush();
+
+        return $project;
+    }
+
+    private function projectWithStylesheet(User $owner): Project
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $project = ProjectFactory::create($entityManager, $owner);
+
+        $epubPath = EpubBuilder::create()
+            ->withChapter('text/ch1.xhtml', '<p>A paragraph.</p>')
+            ->withStylesheet('styles/main.css', "@font-face { src: url('../fonts/f.ttf'); }")
             ->build();
 
         $storage = self::getContainer()->get(ProjectStorage::class);
