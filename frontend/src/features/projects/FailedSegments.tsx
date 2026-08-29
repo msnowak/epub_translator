@@ -2,9 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { ApiError } from '../../api/problem'
 import { listProjectSegments } from '../../api/segments'
+import { useT } from '../../i18n/useT'
 import { chapterLabel } from './chapterLabel'
 
 export function FailedSegments({ projectId }: { projectId: string }) {
+  const { t } = useT()
   const { data, error, isError, isPending } = useQuery({
     queryKey: ['segments', 'failed', projectId],
     queryFn: () => listProjectSegments(projectId, 'failed'),
@@ -35,7 +37,7 @@ export function FailedSegments({ projectId }: { projectId: string }) {
             // Edytor odczyta ?paragraph= i przewinie do tego wiersza.
             to={`/projects/${projectId}/chapters/${segment.chapter.id}?paragraph=${segment.id}`}
           >
-            {chapterLabel(segment.chapter)}, akapit {segment.position + 1}
+            {chapterLabel(segment.chapter, t)}, akapit {segment.position + 1}
           </Link>
           <p className="mt-1 text-neutral-700">{segment.sourceText.slice(0, 160)}</p>
           {null !== segment.errorMessage ? <p className="mt-1 text-red-700">{segment.errorMessage}</p> : null}

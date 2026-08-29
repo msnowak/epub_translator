@@ -1,15 +1,16 @@
 import type { ProjectAction } from '../../api/projects'
 import type { Project, ProjectStatus } from '../../api/types'
+import type { MessageKey } from '../../i18n/messages'
 
-export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
-  parsing: 'Analizowanie pliku',
-  ready: 'Gotowy do tłumaczenia',
-  translating: 'Tłumaczenie',
-  paused: 'Wstrzymany',
-  completed: 'Ukończony',
-  completed_with_errors: 'Ukończony z błędami',
-  cancelled: 'Anulowany',
-  failed: 'Błąd',
+export const PROJECT_STATUS_KEYS: Record<ProjectStatus, MessageKey> = {
+  parsing: 'status.parsing',
+  ready: 'status.ready',
+  translating: 'status.translating',
+  paused: 'status.paused',
+  completed: 'status.completed',
+  completed_with_errors: 'status.completed_with_errors',
+  cancelled: 'status.cancelled',
+  failed: 'status.failed',
 }
 
 /** Statuses whose numbers still move, and which therefore deserve polling. */

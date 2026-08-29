@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
 import type { Chapter } from '../../api/types'
+import { useT } from '../../i18n/useT'
 import { chapterLabel } from './chapterLabel'
 
 export function ChapterTable({ chapters, projectId }: { chapters: Chapter[]; projectId: string }) {
+  const { t } = useT()
+
   if (0 === chapters.length) {
     return <p className="text-neutral-600">Rozdziały pojawią się, gdy plik zostanie przeanalizowany.</p>
   }
@@ -24,7 +27,7 @@ export function ChapterTable({ chapters, projectId }: { chapters: Chapter[]; pro
             <tr key={chapter.id} className={failed > 0 ? 'border-b bg-red-50' : 'border-b'}>
               <td className="py-2">
                 <Link className="underline" to={`/projects/${projectId}/chapters/${chapter.id}`}>
-                  {chapterLabel(chapter)}
+                  {chapterLabel(chapter, t)}
                 </Link>
               </td>
               <td className="py-2">

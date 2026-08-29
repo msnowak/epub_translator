@@ -6,6 +6,7 @@ import { ApiError } from '../../api/problem'
 import { loadChapterPreview } from '../../api/preview'
 import { getProject, listChapters } from '../../api/projects'
 import { listChapterSegments } from '../../api/segments'
+import { useT } from '../../i18n/useT'
 import { chapterLabel } from '../projects/chapterLabel'
 import { ChapterNav } from './ChapterNav'
 import { PreviewPane } from './PreviewPane'
@@ -14,6 +15,7 @@ import { applyTranslation, scrollSegmentIntoView } from './preview'
 import { useRetranslation } from './useRetranslation'
 
 export function EditorPage() {
+  const { t } = useT()
   const { id = '', chapterId = '' } = useParams()
   const [searchParams] = useSearchParams()
   const requested = searchParams.get('paragraph')
@@ -183,7 +185,7 @@ export function EditorPage() {
           <Link className="text-sm underline" to={`/projects/${id}`}>
             ← {project.data?.title ?? 'Książka'}
           </Link>
-          <h1 className="text-lg font-medium">{null === chapter ? 'Rozdział' : chapterLabel(chapter)}</h1>
+          <h1 className="text-lg font-medium">{null === chapter ? 'Rozdział' : chapterLabel(chapter, t)}</h1>
 
           {'translating' === project.data?.status ? (
             <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-sm">

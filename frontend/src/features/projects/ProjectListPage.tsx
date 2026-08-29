@@ -2,11 +2,14 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { ApiError } from '../../api/problem'
 import { listProjects } from '../../api/projects'
+import type { SimpleKey } from '../../i18n/messages'
+import { useT } from '../../i18n/useT'
 import { ProgressBar } from './ProgressBar'
-import { PROJECT_STATUS_LABELS, isBusy } from './status'
+import { PROJECT_STATUS_KEYS, isBusy } from './status'
 import { buttonVariants } from '@/components/ui/button'
 
 export function ProjectListPage() {
+  const { t } = useT()
   const { data, error, isError, isPending } = useQuery({
     queryKey: ['projects'],
     queryFn: listProjects,
@@ -47,7 +50,7 @@ export function ProjectListPage() {
               <Link className="text-lg font-medium underline" to={`/projects/${project.id}`}>
                 {project.title}
               </Link>
-              <p className="text-sm text-neutral-600">{PROJECT_STATUS_LABELS[project.status]}</p>
+              <p className="text-sm text-neutral-600">{t(PROJECT_STATUS_KEYS[project.status] as SimpleKey)}</p>
               <ProgressBar project={project} />
             </li>
           ))}

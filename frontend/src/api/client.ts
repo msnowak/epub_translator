@@ -1,4 +1,4 @@
-import { getActiveLocale } from '../i18n/activeLocale'
+import { getActiveLocale, tActive } from '../i18n/activeLocale'
 import { API_URL } from './config'
 import { ApiError, toApiError } from './problem'
 
@@ -63,7 +63,7 @@ async function runRefresh(): Promise<string> {
     const token = 'object' === typeof body && null !== body ? (body as Record<string, unknown>).token : null
 
     if ('string' !== typeof token || '' === token) {
-      throw new ApiError(response.status, 'Serwer nie zwrócił tokenu sesji.')
+      throw new ApiError(response.status, tActive('common.sessionTokenMissing'))
     }
 
     accessToken = token

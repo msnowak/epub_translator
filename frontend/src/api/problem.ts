@@ -1,3 +1,5 @@
+import { tActive } from '../i18n/activeLocale'
+
 export interface Violation {
   propertyPath: string
   message: string
@@ -36,13 +38,11 @@ export class ApiError extends Error {
   }
 }
 
-const GENERIC_DETAIL = 'Coś poszło nie tak. Spróbuj ponownie.'
-
 export async function toApiError(response: Response): Promise<ApiError> {
   const body = await readJson(response)
 
   if (null === body) {
-    return new ApiError(response.status, GENERIC_DETAIL)
+    return new ApiError(response.status, tActive('common.genericError'))
   }
 
   const violations = Array.isArray(body.violations) ? body.violations.filter(isViolation) : []
@@ -53,7 +53,8 @@ export async function toApiError(response: Response): Promise<ApiError> {
     return new ApiError(response.status, violations[0].message, violations)
   }
 
-  const detail = 'string' === typeof body.detail && '' !== body.detail ? body.detail : GENERIC_DETAIL
+  const detail =
+    'string' === typeof body.detail && '' !== body.detail ? body.detail : tActive('common.genericError')
 
   // Pola "message" celowo nie czytamy: firewall wpisuje tam angielski tekst
   // ("JWT Token not found"), ktorego uzytkownikowi pokazywac nie chcemy.
