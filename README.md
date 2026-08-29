@@ -349,11 +349,11 @@ commit that drops it, so a threshold would only be decorative.
 
 Each of these is a decision this stage made deliberately, not an oversight:
 
-- **No end-to-end tests in a real browser.** A conscious scope decision for
-  this stage, recorded in
-  [`docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md`](docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md):
-  manual walkthroughs substitute for it, and the final pass before merging
-  to `master` is manual too.
+- **No end-to-end tests in a real browser.** A deliberate scope decision:
+  manual walkthroughs substitute for them. That is a real gap, and it has
+  cost real defects - a cross-realm `instanceof`, a namespaced `xlink:href`,
+  a layout collapse jsdom cannot measure, and fonts named from inside a
+  stylesheet - none of which any jsdom or MSW test could have caught.
 - **`TranslatedEpubBuilder` builds the whole book in memory and issues one
   segment query per segment.** A large book's export can exceed the request
   time limit.
@@ -372,8 +372,6 @@ Each of these is a decision this stage made deliberately, not an oversight:
 - **A bare-string `@import "file.css";` inside a stylesheet is not rewritten.**
   `StylesheetRewriter` only signs addresses inside `url(...)`; a stylesheet
   pulled in this way still fails to load through the preview.
-- Smaller items are catalogued in the
-  [stage 8 input debt note](docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md).
 
 ## Troubleshooting
 
