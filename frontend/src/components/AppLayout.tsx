@@ -1,6 +1,7 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { Button } from '@/components/ui/button'
+import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 
 export function AppLayout({ wide = false }: { wide?: boolean }) {
   const { signOut } = useAuth()
@@ -18,9 +19,12 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
           <Link className="font-semibold" to="/">
             EPUB Translator
           </Link>
-          <Button variant="secondary" onClick={onSignOut}>
-            Wyloguj się
-          </Button>
+          <div className="flex items-center gap-2">
+            <LocaleSwitcher />
+            <Button variant="secondary" onClick={onSignOut}>
+              Wyloguj się
+            </Button>
+          </div>
         </div>
       </header>
       <main className="min-h-0 flex-1">

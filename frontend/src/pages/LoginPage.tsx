@@ -8,6 +8,7 @@ import { useAuth } from '../auth/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 
 const schema = z.object({
   email: z.email('To nie jest poprawny adres e-mail.'),
@@ -39,6 +40,9 @@ export function LoginPage() {
 
   return (
     <main className="mx-auto flex max-w-sm flex-col gap-6 p-8">
+      <div className="flex justify-end">
+        <LocaleSwitcher />
+      </div>
       <h1 className="text-2xl font-semibold">Zaloguj się</h1>
       <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
         <div className="flex flex-col gap-2">
