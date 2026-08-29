@@ -446,3 +446,25 @@ the preview endpoint mints into every rewritten URL. A missing image usually
 means the signature expired — reload the chapter — or that the path is absent
 from the book's OPF manifest, which the endpoint checks before serving
 anything.
+
+**Switching the `prod` profile off and back on fails to start a container**,
+with something like:
+
+```
+Error response from daemon: failed to set up container networking:
+network 6209f434...48f19 not found
+```
+
+`docker compose --profile prod down` removes the project's network along with
+the containers, but a container from the compose file that is still around —
+started under the other profile, or left over from before the `down` — keeps
+the old network's id in its own configuration and can't reattach to the new
+one that came up under it. Restarting that container is not enough, because
+restart reuses the existing (stale) configuration; it has to be rebuilt:
+
+```bash
+docker compose up -d --force-recreate <service>
+```
+
+`--force-recreate` replaces the container, not its volumes — named volumes
+(the database, the JWT keys) are untouched.
