@@ -19,6 +19,18 @@ final readonly class AssetUrlRewriter
     }
 
     /**
+     * Addresses inside a book are relative to the file that carries them - a
+     * chapter's own href for the markup it holds, a stylesheet's own href for
+     * the url() values inside it - not to the root of the zip.
+     */
+    public function baseFor(string $href): string
+    {
+        $base = \dirname($href);
+
+        return '.' === $base ? '' : $base;
+    }
+
+    /**
      * Turns a book-internal address into a signed preview URL, or returns null
      * when the address does not point inside the book at all - an anchor, a
      * data: URI, or an absolute URL.

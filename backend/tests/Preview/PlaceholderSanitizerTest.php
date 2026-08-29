@@ -84,8 +84,11 @@ final class PlaceholderSanitizerTest extends TestCase
      */
     private function sanitize(array $placeholders): array
     {
+        $rewriter = new AssetUrlRewriter(new AssetUrlSigner('sekret'));
+
         $sanitizer = new PlaceholderSanitizer(
-            new ElementSanitizer(new AssetUrlRewriter(new AssetUrlSigner('sekret'))),
+            new ElementSanitizer($rewriter),
+            $rewriter,
             new InlineTokenizer(),
         );
 

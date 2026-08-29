@@ -27,19 +27,6 @@ final readonly class ElementSanitizer
     ) {
     }
 
-    /**
-     * Addresses inside a book are relative to the chapter file, not to the root
-     * of the zip. Static: it is a pure function of the path, and
-     * StylesheetRewriter needs the exact same computation for a stylesheet's
-     * own location without needing an ElementSanitizer instance to get it.
-     */
-    public static function baseFor(string $chapterHref): string
-    {
-        $base = \dirname($chapterHref);
-
-        return '.' === $base ? '' : $base;
-    }
-
     /** True for elements that must not survive in the preview at all. */
     public function isRemovable(\DOMElement $element): bool
     {

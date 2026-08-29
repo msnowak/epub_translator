@@ -15,6 +15,7 @@ final readonly class PreviewDecorator
 {
     public function __construct(
         private ElementSanitizer $sanitizer,
+        private AssetUrlRewriter $rewriter,
         private string $apiOrigin,
     ) {
     }
@@ -32,7 +33,7 @@ final readonly class PreviewDecorator
     ): void {
         $this->markBlocks($blocks, $segmentIdsByNodeIndex);
 
-        $base = $this->sanitizer->baseFor($chapterHref);
+        $base = $this->rewriter->baseFor($chapterHref);
 
         // Jedno przejscie po migawce elementow. localName widzi element tak
         // samo w przestrzeni nazw XHTML i bez niej, wiec XPath z prefiksami

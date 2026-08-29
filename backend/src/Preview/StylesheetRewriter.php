@@ -33,7 +33,7 @@ final readonly class StylesheetRewriter
      */
     public function rewrite(string $css, string $projectId, string $cssHref): string
     {
-        $base = ElementSanitizer::baseFor($cssHref);
+        $base = $this->rewriter->baseFor($cssHref);
 
         $rewritten = preg_replace_callback(
             self::URL_PATTERN,
@@ -47,7 +47,7 @@ final readonly class StylesheetRewriter
                     return $matches[0];
                 }
 
-                // Wynik zawsze w cudzyslowie, niezalezno od tego, jak
+                // Wynik zawsze w cudzyslowie, niezaleznie od tego, jak
                 // wygladal oryginal: podpisany adres nie moze rozjechac sie
                 // o nawias ani spacje, ktorych sam nie ma jak zawierac, ale
                 // ktore czasem otaczaly oryginalna wartosc.

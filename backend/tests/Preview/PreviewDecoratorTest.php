@@ -380,10 +380,9 @@ final class PreviewDecoratorTest extends TestCase
 
     private function decorator(): PreviewDecorator
     {
-        return new PreviewDecorator(
-            new ElementSanitizer(new AssetUrlRewriter(new AssetUrlSigner('sekret'))),
-            'https://api.example',
-        );
+        $rewriter = new AssetUrlRewriter(new AssetUrlSigner('sekret'));
+
+        return new PreviewDecorator(new ElementSanitizer($rewriter), $rewriter, 'https://api.example');
     }
 
     private function chapter(string $body): string

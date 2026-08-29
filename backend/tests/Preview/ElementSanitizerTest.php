@@ -13,14 +13,6 @@ final class ElementSanitizerTest extends TestCase
 {
     private const string PROJECT = '01920000-0000-7000-8000-000000000000';
 
-    public function testResolvesTheBaseAgainstTheChapterDirectory(): void
-    {
-        $sanitizer = $this->sanitizer();
-
-        self::assertSame('OEBPS', $sanitizer->baseFor('OEBPS/ch1.xhtml'));
-        self::assertSame('', $sanitizer->baseFor('ch1.xhtml'));
-    }
-
     public function testRecognisesWhatMustNotSurviveInThePreview(): void
     {
         $sanitizer = $this->sanitizer();
