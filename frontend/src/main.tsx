@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import { AuthProvider } from './auth/AuthProvider.tsx'
+import { LocaleProvider } from './i18n/LocaleProvider.tsx'
 import './index.css'
 
 const queryClient = new QueryClient()
@@ -18,12 +19,14 @@ if (null === container) {
 // przy zepsutej aplikacji.
 createRoot(container).render(
   <StrictMode>
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
+    <LocaleProvider>
+      <BrowserRouter>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </QueryClientProvider>
+      </BrowserRouter>
+    </LocaleProvider>
   </StrictMode>,
 )

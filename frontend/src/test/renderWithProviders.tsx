@@ -4,10 +4,12 @@ import { StrictMode } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { AuthProvider } from '../auth/AuthProvider'
+import { LocaleProvider } from '../i18n/LocaleProvider'
+import type { Locale } from '../i18n/locales'
 
 export function renderWithProviders(
   ui: ReactElement,
-  options: { route?: string } = {},
+  options: { route?: string; locale?: Locale } = {},
 ): RenderResult & { queryClient: QueryClient } {
   // retry: false - inaczej kazdy test bledu czekalby na trzy nieudane proby.
   const queryClient = new QueryClient({
@@ -22,11 +24,13 @@ export function renderWithProviders(
     // nie wykona sie dwa razy - patrz useSegmentEditor's "mounted" ref.
     return (
       <StrictMode>
-        <MemoryRouter initialEntries={[options.route ?? '/']}>
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>{children}</AuthProvider>
-          </QueryClientProvider>
-        </MemoryRouter>
+        <LocaleProvider initial={options.locale ?? 'pl'}>
+          <MemoryRouter initialEntries={[options.route ?? '/']}>
+            <QueryClientProvider client={queryClient}>
+              <AuthProvider>{children}</AuthProvider>
+            </QueryClientProvider>
+          </MemoryRouter>
+        </LocaleProvider>
       </StrictMode>
     )
   }

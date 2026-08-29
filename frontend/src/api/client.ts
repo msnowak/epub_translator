@@ -1,3 +1,4 @@
+import { getActiveLocale } from '../i18n/activeLocale'
 import { API_URL } from './config'
 import { ApiError, toApiError } from './problem'
 
@@ -103,6 +104,7 @@ export async function apiFetch(path: string, init: ApiFetchInit = {}): Promise<R
 function send(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers)
   headers.set('Accept', 'application/json')
+  headers.set('Accept-Language', getActiveLocale())
 
   if (null !== accessToken) {
     headers.set('Authorization', `Bearer ${accessToken}`)

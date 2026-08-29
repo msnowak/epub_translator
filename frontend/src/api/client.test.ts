@@ -1,13 +1,15 @@
 import { HttpResponse, http } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { setActiveLocale } from '../i18n/activeLocale'
 import { server } from '../test/server'
 import { ApiError } from './problem'
-import { apiJson, onSessionLost, setAccessToken } from './client'
+import { apiFetch, apiJson, onSessionLost, setAccessToken } from './client'
 
 const API = 'http://localhost:8000'
 
 afterEach(() => {
   setAccessToken(null)
+  setActiveLocale('pl')
 })
 
 describe('apiJson', () => {
@@ -134,5 +136,22 @@ describe('apiJson', () => {
       email: 'To nie jest poprawny adres e-mail.',
       plainPassword: 'Hasło musi mieć co najmniej 8 znaków.',
     })
+  })
+
+  it('sends the active interface language', async () => {
+    let seen: string | null = null
+
+    server.use(
+      http.get(`${API}/api/ping`, ({ request }) => {
+        seen = request.headers.get('Accept-Language')
+
+        return HttpResponse.json({})
+      }),
+    )
+    setActiveLocale('en')
+
+    await apiFetch('/api/ping')
+
+    expect(seen).toBe('en')
   })
 })
