@@ -20,13 +20,20 @@ describe('catalog parity', () => {
 
   it.each(LOCALES)('%s uses the same placeholders as Polish', (locale: Locale) => {
     for (const key of KEYS) {
-      const expected = placeholders(forms(pl[key]).join(' '))
-      const unique = [...new Set(expected)]
+      const expected = [...new Set(placeholders(forms(pl[key]).join(' ')))].sort()
 
       for (const form of forms(CATALOGS[locale][key])) {
-        // Kazdy placeholder uzyty w tlumaczeniu musi istniec po stronie
-        // zrodlowej - inaczej podstawimy w to miejsce doslowny nawias.
-        expect(unique).toEqual(expect.arrayContaining([...new Set(placeholders(form))]))
+        const actual = [...new Set(placeholders(form))].sort()
+
+        // Rownosc w obie strony, nie zawieranie: placeholder nadmiarowy
+        // zostalby na ekranie doslownie, a zgubiony po cichu wycialby dane
+        // ze zdania - i wlasnie ten drugi przypadek jest tym, ktorego test
+        // ma pilnowac.
+        expect({ key, locale, placeholders: actual }).toEqual({
+          key,
+          locale,
+          placeholders: expected,
+        })
       }
     }
   })
