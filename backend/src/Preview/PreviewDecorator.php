@@ -61,7 +61,20 @@ final readonly class PreviewDecorator
         $head = $document->getElementsByTagName('head')->item(0);
 
         if (!$head instanceof \DOMElement) {
-            return;
+            // loadXML() sprawdza tylko poprawnosc XML, nie schemat XHTML, wiec
+            // dokument bez <head> parsuje sie bez bledu i dociera tutaj bez
+            // glowy - trzeba ja dopiero stworzyc, zeby polityka mogla wejsc.
+            $documentElement = $document->documentElement;
+
+            if (!$documentElement instanceof \DOMElement) {
+                return;
+            }
+
+            // createElementNS, nie createElement: dokument jedzie przez
+            // loadXML, wiec element bez przestrzeni nazw wyszedlby jako
+            // <head xmlns="">.
+            $head = $document->createElementNS($documentElement->namespaceURI, 'head');
+            $documentElement->insertBefore($head, $documentElement->firstChild);
         }
 
         // createElementNS, nie createElement: dokument jedzie przez loadXML,

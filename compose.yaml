@@ -11,7 +11,9 @@ services:
       retries: 10
       start_period: 30s
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Tylko localhost - profil prod nie powinien wystawiac bazy na caly
+      # swiat, a hosta klienty baz danych i tak dzialaja przez 127.0.0.1.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - database_data:/var/lib/postgresql/data:rw
 
@@ -33,6 +35,9 @@ services:
       # Wchodzi do polityki CSP dokumentu podgladu: dokument srcdoc dziedziczy
       # origin SPA, a zasoby ksiazki wskazuja tutaj, wiec 'self' by je zablokowal.
       APP_PUBLIC_API_URL: ${VITE_API_URL:-http://localhost:8000}
+      # Musi wedrowac razem z VITE_API_URL/adresem SPA - inaczej przegladarka
+      # odrzuca kazde zadanie do API juz na etapie preflightu CORS.
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:-^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$$}
       JWT_PASSPHRASE: ${JWT_PASSPHRASE:-change-me}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}

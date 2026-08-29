@@ -70,6 +70,17 @@ final class RefreshTokenManagerTest extends KernelTestCase
         self::assertSame($issued->getSameSite(), $cleared->getSameSite());
     }
 
+    public function testTheContainerWiresTheSecureFlagFromTheTestEnvironment(): void
+    {
+        // Poprzednie testy budowaly manager recznie z jawnym boolem, wiec
+        // zla nazwa zmiennej w services.yaml nie zostalaby wykryta - tu
+        // sciagamy egzemplarz z kontenera, jak robi to reszta aplikacji.
+        $manager = self::getContainer()->get(RefreshTokenManager::class);
+        $user = $this->user('wired@example.com');
+
+        self::assertFalse($manager->issue($user)->isSecure());
+    }
+
     private function manager(bool $secure): RefreshTokenManager
     {
         return new RefreshTokenManager($this->entityManager, $this->repository, $secure);

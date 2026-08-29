@@ -7,7 +7,7 @@
 		# obowiazuje czesc wspolna. Dlatego origin API musi byc dopuszczony
 		# takze tutaj, inaczej obrazki ksiazki znikna mimo poprawnego
 		# metatagu, ktory wstawia PreviewDecorator.
-		Content-Security-Policy "default-src 'self'; connect-src 'self' {$API_ORIGIN}; img-src 'self' data: {$API_ORIGIN}; style-src 'self' 'unsafe-inline' {$API_ORIGIN}; font-src 'self' data: {$API_ORIGIN}; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; connect-src 'self' {$API_ORIGIN:http://localhost:8000}; img-src 'self' data: {$API_ORIGIN:http://localhost:8000}; style-src 'self' 'unsafe-inline' {$API_ORIGIN:http://localhost:8000}; font-src 'self' data: {$API_ORIGIN:http://localhost:8000}; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "no-referrer"
 		-Server

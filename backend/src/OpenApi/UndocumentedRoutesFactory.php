@@ -66,6 +66,10 @@ final readonly class UndocumentedRoutesFactory implements OpenApiFactoryInterfac
                     new Parameter('path', 'path', 'Ścieżka zasobu wewnątrz archiwum.', true),
                     new Parameter('t', 'query', 'Podpis adresu.', true),
                 ],
+                // Puste, nie pominiete: bez tego operacja dziedziczy schemat
+                // bezpieczenstwa z calego dokumentu i Swagger sugerowalby
+                // token nosny, chociaz to jedyny endpoint bez zapory JWT.
+                security: [],
             ),
         ));
 

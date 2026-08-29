@@ -148,6 +148,42 @@ resolves it while bundling, not while the container runs - so changing it
 needs `docker compose --profile prod up -d --build` again, not just a
 restart.
 
+**`CORS_ALLOW_ORIGIN` must move together with `VITE_API_URL`.** It is the
+regex `nelmio_cors.yaml` checks the browser's `Origin` header against
+(`backend/.env`, passed through by `compose.yaml`); it defaults to matching
+only `localhost`/`127.0.0.1`. Deploy the SPA under a real hostname without
+also setting `CORS_ALLOW_ORIGIN` to match it, and every request from the
+browser dies at the CORS preflight before it reaches the application. In the
+same vein, the refresh-token cookie is `SameSite=Lax` (see
+`REFRESH_COOKIE_SECURE` above), so the SPA and the API have to stay
+same-site - not just CORS-allowed - or the browser drops the cookie the way
+the Troubleshooting entry below describes for `localhost` versus
+`127.0.0.1`, except now across two genuinely different hostnames with no
+workaround short of putting both behind the same site.
+
+**Before you expose this.** A verbatim `cp .env.example .env` leaves three
+values at their placeholder default, and the README above never told you to
+change them:
+
+- `APP_SECRET` - not boilerplate. It is Symfony's `%kernel.secret%`, and
+  `App\Preview\AssetUrlSigner` (`backend/src/Preview/AssetUrlSigner.php`) is
+  autowired with it as the HMAC key that signs `/api/projects/{id}/assets/`
+  URLs, the one endpoint deliberately outside the JWT firewall. With the
+  published `change-me` value, anyone who learns a project id and an asset
+  path can compute a valid signature themselves and pull book content
+  without ever authenticating.
+- `JWT_PASSPHRASE` - protects the private key `lexik:jwt:generate-keypair`
+  writes into the `jwt_keys` volume; leaving it at `change-me` weakens that
+  key to a guessable passphrase.
+- `POSTGRES_PASSWORD` - the database's own password, published in this repo.
+
+Generate a real value for each and put it in `.env` before the first
+`docker compose --profile prod up`:
+
+```bash
+openssl rand -hex 32
+```
+
 ## Downloading the translated book
 
 `GET /api/projects/{id}/download` returns the book as `application/epub+zip`.

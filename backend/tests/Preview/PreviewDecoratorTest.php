@@ -334,6 +334,24 @@ final class PreviewDecoratorTest extends TestCase
         self::assertStringContainsString("default-src 'none'", $policy);
     }
 
+    public function testInjectsThePolicyEvenWithoutAHeadElement(): void
+    {
+        $xhtml = new XhtmlDocument();
+        $document = $xhtml->load(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            .'<html xmlns="http://www.w3.org/1999/xhtml"><body><p>One.</p></body></html>',
+        );
+
+        // loadXML() sprawdza tylko poprawnosc XML, nie schemat XHTML, wiec
+        // dokument bez <head> parsuje sie bez bledu i dociera tutaj bez glowy.
+        $this->decorate($xhtml, $document, []);
+
+        $policy = $this->policyOf($document);
+
+        self::assertStringContainsString("default-src 'none'", $policy);
+        self::assertStringNotContainsString('xmlns=""', $xhtml->save($document));
+    }
+
     private function policyOf(\DOMDocument $document): string
     {
         foreach ($document->getElementsByTagName('meta') as $meta) {
