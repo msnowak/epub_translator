@@ -45,6 +45,12 @@ export function SegmentList({
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 180,
     overscan: 6,
+    // Domyslnie biblioteka wola flushSync przy synchronicznej zmianie, a
+    // measureElement nizej jest callbackiem ref, wiec wykonuje sie w fazie
+    // commitu - React odmawia wtedy flushowania i wypisuje ostrzezenie do
+    // konsoli. Odklada przerysowanie do zwyklego cyklu, co dla listy
+    // mierzonej dynamicznie jest wystarczajace.
+    useFlushSync: false,
   })
 
   useEffect(() => {
