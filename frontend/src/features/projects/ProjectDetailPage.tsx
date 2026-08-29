@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../../api/problem'
 import { getProject, listChapters } from '../../api/projects'
-import type { SimpleKey } from '../../i18n/messages'
 import { useT } from '../../i18n/useT'
 import { ChapterTable } from './ChapterTable'
 import { FailedSegments } from './FailedSegments'
@@ -48,7 +47,7 @@ export function ProjectDetailPage() {
           ← Wszystkie książki
         </Link>
         <h1 className="text-2xl font-semibold">{data.title}</h1>
-        <p className="text-sm font-medium">{t(PROJECT_STATUS_KEYS[data.status] as SimpleKey)}</p>
+        <p className="text-sm font-medium">{t(PROJECT_STATUS_KEYS[data.status])}</p>
         <p className="text-sm text-neutral-600">
           {data.sourceLanguage ?? 'język wykrywany'} → {data.targetLanguage} · {data.ollamaModel} ·{' '}
           {data.originalFilename}

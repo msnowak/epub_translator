@@ -1,8 +1,8 @@
 import type { ProjectAction } from '../../api/projects'
 import type { Project, ProjectStatus } from '../../api/types'
-import type { MessageKey } from '../../i18n/messages'
+import type { SimpleKey } from '../../i18n/messages'
 
-export const PROJECT_STATUS_KEYS: Record<ProjectStatus, MessageKey> = {
+export const PROJECT_STATUS_KEYS: Record<ProjectStatus, SimpleKey> = {
   parsing: 'status.parsing',
   ready: 'status.ready',
   translating: 'status.translating',
