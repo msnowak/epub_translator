@@ -1,3 +1,4 @@
+import { getActiveLocale } from '../i18n/activeLocale'
 import { apiJson, setAccessToken } from './client'
 import { API_URL } from './config'
 import { toApiError } from './problem'
@@ -12,7 +13,7 @@ export async function login(email: string, password: string): Promise<void> {
   const response = await fetch(`${API_URL}/api/login_check`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'Accept-Language': getActiveLocale() },
     body: JSON.stringify({ email, password }),
   })
 

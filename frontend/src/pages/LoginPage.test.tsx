@@ -1,7 +1,8 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { setActiveLocale } from '../i18n/activeLocale'
 import { server } from '../test/server'
 import { renderWithProviders } from '../test/renderWithProviders'
 import App from '../App'
@@ -11,6 +12,10 @@ const API = 'http://localhost:8000'
 const noSession = http.post(`${API}/api/token/refresh`, () =>
   HttpResponse.json({ detail: 'Brak tokenu odświeżającego.' }, { status: 401 }),
 )
+
+afterEach(() => {
+  setActiveLocale('pl')
+})
 
 describe('LoginPage', () => {
   it('logs in and lands on the project list', async () => {
@@ -42,5 +47,27 @@ describe('LoginPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Zaloguj się' }))
 
     expect(await screen.findByText('Nieprawidłowy e-mail lub hasło.')).toBeVisible()
+  })
+
+  it('sends the active interface language on the login request', async () => {
+    let seen: string | null = null
+
+    server.use(
+      noSession,
+      http.post(`${API}/api/login_check`, ({ request }) => {
+        seen = request.headers.get('Accept-Language')
+
+        return HttpResponse.json({ token: 'fresh' })
+      }),
+      http.get(`${API}/api/projects`, () => HttpResponse.json([])),
+    )
+    renderWithProviders(<App />, { route: '/login', locale: 'en' })
+
+    await userEvent.type(await screen.findByLabelText('Adres e-mail'), 'reader@example.com')
+    await userEvent.type(screen.getByLabelText('Hasło'), 'correcthorse')
+    await userEvent.click(screen.getByRole('button', { name: 'Zaloguj się' }))
+
+    expect(await screen.findByRole('heading', { name: 'Twoje książki' })).toBeVisible()
+    expect(seen).toBe('en')
   })
 })
