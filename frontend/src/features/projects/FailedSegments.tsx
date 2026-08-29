@@ -32,8 +32,8 @@ export function FailedSegments({ projectId }: { projectId: string }) {
         <li key={segment.id} className="rounded-md border border-red-200 bg-red-50 p-3 text-sm">
           <Link
             className="font-medium underline"
-            // Edytor odczyta ?akapit= i przewinie do tego wiersza.
-            to={`/projekty/${projectId}/rozdzialy/${segment.chapter.id}?akapit=${segment.id}`}
+            // Edytor odczyta ?paragraph= i przewinie do tego wiersza.
+            to={`/projects/${projectId}/chapters/${segment.chapter.id}?paragraph=${segment.id}`}
           >
             {chapterLabel(segment.chapter)}, akapit {segment.position + 1}
           </Link>

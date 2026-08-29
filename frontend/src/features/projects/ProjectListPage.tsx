@@ -34,7 +34,7 @@ export function ProjectListPage() {
         <h1 className="text-2xl font-semibold">Twoje książki</h1>
         {/* Link ostylowany jak przycisk: ten wariant shadcn stoi na Base UI,
             ktore nie zna "asChild" - podmiana elementu idzie przez klasy. */}
-        <Link className={buttonVariants()} to="/projekty/nowy">
+        <Link className={buttonVariants()} to="/projects/new">
           Wgraj książkę
         </Link>
       </div>
@@ -44,7 +44,7 @@ export function ProjectListPage() {
         <ul className="flex flex-col gap-4">
           {data.map((project) => (
             <li key={project.id} className="flex flex-col gap-2 rounded-lg border p-4">
-              <Link className="text-lg font-medium underline" to={`/projekty/${project.id}`}>
+              <Link className="text-lg font-medium underline" to={`/projects/${project.id}`}>
                 {project.title}
               </Link>
               <p className="text-sm text-neutral-600">{PROJECT_STATUS_LABELS[project.status]}</p>

@@ -76,10 +76,10 @@ function handlers() {
   ]
 }
 
-function renderEditor(route = '/projekty/p/rozdzialy/ch-1') {
+function renderEditor(route = '/projects/p/chapters/ch-1') {
   return renderWithProviders(
     <Routes>
-      <Route path="/projekty/:id/rozdzialy/:chapterId" element={<EditorPage />} />
+      <Route path="/projects/:id/chapters/:chapterId" element={<EditorPage />} />
     </Routes>,
     { route },
   )
@@ -521,8 +521,8 @@ describe('EditorPage', () => {
     expect(scrollToIndexSpy()).not.toHaveBeenCalled()
   })
 
-  it('scrolls to the requested paragraph when opened via ?akapit=', async () => {
-    renderEditor('/projekty/p/rozdzialy/ch-1?akapit=seg-1')
+  it('scrolls to the requested paragraph when opened via ?paragraph=', async () => {
+    renderEditor('/projects/p/chapters/ch-1?paragraph=seg-1')
 
     await screen.findByText('A [1]word[/1].')
 

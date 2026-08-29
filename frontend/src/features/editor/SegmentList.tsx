@@ -9,7 +9,7 @@ interface Props {
   activeId: string | null
   // Zadanie przewiniecia listy do konkretnego akapitu, wystawiane przez
   // rodzica wylacznie dla aktywacji spoza listy (klikniecie w podgladzie,
-  // link "?akapit=") - patrz komentarz przy activate() w EditorPage. Token
+  // link "?paragraph=") - patrz komentarz przy activate() w EditorPage. Token
   // rosnie przy kazdym takim zadaniu, wiec klikniecie tego samego akapitu
   // drugi raz z rzedu wciaz jest nowa wartoscia obiektu i efekt ponizej
   // faktycznie sie uruchamia - sam string by tu nie wystarczyl.

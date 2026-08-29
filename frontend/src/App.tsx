@@ -11,16 +11,16 @@ import { RegisterPage } from './pages/RegisterPage'
 export default function App() {
   return (
     <Routes>
-      <Route path="/logowanie" element={<LoginPage />} />
-      <Route path="/rejestracja" element={<RegisterPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<ProjectListPage />} />
-          <Route path="/projekty/nowy" element={<ProjectWizardPage />} />
-          <Route path="/projekty/:id" element={<ProjectDetailPage />} />
+          <Route path="/projects/new" element={<ProjectWizardPage />} />
+          <Route path="/projects/:id" element={<ProjectDetailPage />} />
         </Route>
         <Route element={<AppLayout wide />}>
-          <Route path="/projekty/:id/rozdzialy/:chapterId" element={<EditorPage />} />
+          <Route path="/projects/:id/chapters/:chapterId" element={<EditorPage />} />
         </Route>
       </Route>
     </Routes>

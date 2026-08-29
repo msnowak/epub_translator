@@ -23,7 +23,7 @@ export function ChapterTable({ chapters, projectId }: { chapters: Chapter[]; pro
           return (
             <tr key={chapter.id} className={failed > 0 ? 'border-b bg-red-50' : 'border-b'}>
               <td className="py-2">
-                <Link className="underline" to={`/projekty/${projectId}/rozdzialy/${chapter.id}`}>
+                <Link className="underline" to={`/projects/${projectId}/chapters/${chapter.id}`}>
                   {chapterLabel(chapter)}
                 </Link>
               </td>

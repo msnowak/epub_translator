@@ -56,7 +56,7 @@ describe('ProjectWizardPage', () => {
       http.get(`${API}/api/projects/p1`, () => HttpResponse.json(parsingProject)),
       http.get(`${API}/api/projects/p1/chapters`, () => HttpResponse.json([])),
     )
-    renderWithProviders(<App />, { route: '/projekty/nowy' })
+    renderWithProviders(<App />, { route: '/projects/new' })
 
     await fillTheForm()
     await userEvent.click(screen.getByRole('button', { name: 'Wgraj i utwórz projekt' }))
@@ -96,7 +96,7 @@ describe('ProjectWizardPage', () => {
         ),
       ),
     )
-    renderWithProviders(<App />, { route: '/projekty/nowy' })
+    renderWithProviders(<App />, { route: '/projects/new' })
 
     expect(
       await screen.findByText('Nie udało się połączyć z serwerem Ollama. Sprawdź konfigurację połączenia.'),
@@ -114,7 +114,7 @@ describe('ProjectWizardPage', () => {
         ),
       ),
     )
-    renderWithProviders(<App />, { route: '/projekty/nowy' })
+    renderWithProviders(<App />, { route: '/projects/new' })
 
     await fillTheForm()
     await userEvent.click(screen.getByRole('button', { name: 'Wgraj i utwórz projekt' }))

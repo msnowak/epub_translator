@@ -89,7 +89,7 @@ export function RegisterPage() {
       </form>
       <p className="text-sm text-neutral-600">
         Masz już konto?{' '}
-        <Link className="underline" to="/logowanie">
+        <Link className="underline" to="/login">
           Zaloguj się
         </Link>
         .

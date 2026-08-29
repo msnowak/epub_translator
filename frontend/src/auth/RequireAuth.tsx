@@ -10,5 +10,5 @@ export function RequireAuth() {
     return <p className="p-8 text-neutral-500">Wczytywanie…</p>
   }
 
-  return 'authenticated' === state ? <Outlet /> : <Navigate to="/logowanie" replace />
+  return 'authenticated' === state ? <Outlet /> : <Navigate to="/login" replace />
 }

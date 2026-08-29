@@ -17,7 +17,7 @@ export function ChapterNav({ projectId, chapters, currentId }: Props) {
         return (
           <Link
             key={chapter.id}
-            to={`/projekty/${projectId}/rozdzialy/${chapter.id}`}
+            to={`/projects/${projectId}/chapters/${chapter.id}`}
             className={`rounded-md px-2 py-1 text-sm ${chapter.id === currentId ? 'bg-neutral-200 font-medium' : 'hover:bg-neutral-100'}`}
           >
             {chapterLabel(chapter)}

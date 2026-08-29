@@ -67,7 +67,7 @@ export function LoginPage() {
       </form>
       <p className="text-sm text-neutral-600">
         Nie masz konta?{' '}
-        <Link className="underline" to="/rejestracja">
+        <Link className="underline" to="/register">
           Załóż je
         </Link>
         .

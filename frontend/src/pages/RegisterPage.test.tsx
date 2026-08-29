@@ -20,7 +20,7 @@ describe('RegisterPage', () => {
       http.post(`${API}/api/login_check`, () => HttpResponse.json({ token: 'fresh' })),
       http.get(`${API}/api/projects`, () => HttpResponse.json([])),
     )
-    renderWithProviders(<App />, { route: '/rejestracja' })
+    renderWithProviders(<App />, { route: '/register' })
 
     await userEvent.type(await screen.findByLabelText('Adres e-mail'), 'reader@example.com')
     await userEvent.type(screen.getByLabelText('Hasło'), 'correcthorse')
@@ -43,7 +43,7 @@ describe('RegisterPage', () => {
         ),
       ),
     )
-    renderWithProviders(<App />, { route: '/rejestracja' })
+    renderWithProviders(<App />, { route: '/register' })
 
     await userEvent.type(await screen.findByLabelText('Adres e-mail'), 'taken@example.com')
     await userEvent.type(screen.getByLabelText('Hasło'), 'correcthorse')
@@ -54,7 +54,7 @@ describe('RegisterPage', () => {
 
   it('refuses a password the backend would reject anyway', async () => {
     server.use(noSession)
-    renderWithProviders(<App />, { route: '/rejestracja' })
+    renderWithProviders(<App />, { route: '/register' })
 
     await userEvent.type(await screen.findByLabelText('Adres e-mail'), 'reader@example.com')
     await userEvent.type(screen.getByLabelText('Hasło'), 'krotkie')

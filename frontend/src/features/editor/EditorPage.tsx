@@ -16,7 +16,7 @@ import { useRetranslation } from './useRetranslation'
 export function EditorPage() {
   const { id = '', chapterId = '' } = useParams()
   const [searchParams] = useSearchParams()
-  const requested = searchParams.get('akapit')
+  const requested = searchParams.get('paragraph')
   const jumped = useRef(false)
   const frameRef = useRef<HTMLIFrameElement>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -114,7 +114,7 @@ export function EditorPage() {
   // tekstowym wiersza (uzytkownik juz na niego patrzy - przewijanie listy
   // byloby co najmniej bezcelowe, a w trakcie pisania wrecz przeszkadzalo -
   // patrz punkt 2 zadania) oraz zdarzenia spoza listy, klikniecie w
-  // podgladzie albo link "?akapit=" (lista wlasnie nie ma tego wiersza w
+  // podgladzie albo link "?paragraph=" (lista wlasnie nie ma tego wiersza w
   // oknie widocznosci i to ja trzeba przewinac). "source" czyni ten podzial
   // jawnym w miejscu wywolania, zamiast zgadywac go po tym, kto zawolal.
   //
@@ -180,7 +180,7 @@ export function EditorPage() {
 
       <section className="flex h-full flex-col overflow-hidden">
         <header className="flex flex-col gap-2 border-b p-3">
-          <Link className="text-sm underline" to={`/projekty/${id}`}>
+          <Link className="text-sm underline" to={`/projects/${id}`}>
             ← {project.data?.title ?? 'Książka'}
           </Link>
           <h1 className="text-lg font-medium">{null === chapter ? 'Rozdział' : chapterLabel(chapter)}</h1>

@@ -8,7 +8,7 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
 
   async function onSignOut() {
     await signOut()
-    navigate('/logowanie', { replace: true })
+    navigate('/login', { replace: true })
   }
 
   return (

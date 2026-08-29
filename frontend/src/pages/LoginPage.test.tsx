@@ -19,7 +19,7 @@ describe('LoginPage', () => {
       http.post(`${API}/api/login_check`, () => HttpResponse.json({ token: 'fresh' })),
       http.get(`${API}/api/projects`, () => HttpResponse.json([])),
     )
-    renderWithProviders(<App />, { route: '/logowanie' })
+    renderWithProviders(<App />, { route: '/login' })
 
     await userEvent.type(await screen.findByLabelText('Adres e-mail'), 'reader@example.com')
     await userEvent.type(screen.getByLabelText('Hasło'), 'correcthorse')
@@ -35,7 +35,7 @@ describe('LoginPage', () => {
         HttpResponse.json({ status: 401, detail: 'Nieprawidłowy e-mail lub hasło.' }, { status: 401 }),
       ),
     )
-    renderWithProviders(<App />, { route: '/logowanie' })
+    renderWithProviders(<App />, { route: '/login' })
 
     await userEvent.type(await screen.findByLabelText('Adres e-mail'), 'reader@example.com')
     await userEvent.type(screen.getByLabelText('Hasło'), 'wrong-password')

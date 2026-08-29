@@ -39,7 +39,7 @@ describe('FailedSegments', () => {
 
     const link = await screen.findByRole('link', { name: /Rozdział 2/ })
 
-    expect(link).toHaveAttribute('href', '/projekty/p/rozdzialy/ch-2?akapit=seg-9')
+    expect(link).toHaveAttribute('href', '/projects/p/chapters/ch-2?paragraph=seg-9')
     expect(screen.getByText('Model nie odpowiedział.')).toBeInTheDocument()
   })
 

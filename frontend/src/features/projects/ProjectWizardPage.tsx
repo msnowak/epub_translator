@@ -66,7 +66,7 @@ export function ProjectWizardPage() {
 
     try {
       const project = await createProject(payload)
-      navigate(`/projekty/${project.id}`, { replace: true })
+      navigate(`/projects/${project.id}`, { replace: true })
     } catch (error) {
       // Upload odpowiada golym "detail", bez tablicy violations - pokazujemy
       // dokladnie to, co przyszlo.

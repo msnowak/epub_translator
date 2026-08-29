@@ -50,7 +50,7 @@ describe('ProjectDetailPage', () => {
         ),
       ),
     )
-    renderWithProviders(<App />, { route: '/projekty/p1' })
+    renderWithProviders(<App />, { route: '/projects/p1' })
 
     await userEvent.click(await screen.findByRole('button', { name: 'Rozpocznij tłumaczenie' }))
 
@@ -60,7 +60,7 @@ describe('ProjectDetailPage', () => {
 
   it('offers only the actions the status allows', async () => {
     server.use(session, noChapters, http.get(`${API}/api/projects/p1`, () => HttpResponse.json(project('ready'))))
-    renderWithProviders(<App />, { route: '/projekty/p1' })
+    renderWithProviders(<App />, { route: '/projects/p1' })
 
     expect(await screen.findByRole('button', { name: 'Rozpocznij tłumaczenie' })).toBeEnabled()
     // Wstrzymac mozna tylko to, co sie tlumaczy - przycisk ma nie istniec,
@@ -78,7 +78,7 @@ describe('ProjectDetailPage', () => {
         HttpResponse.json({ status: 409, detail: 'Projekt jest już tłumaczony.' }, { status: 409 }),
       ),
     )
-    renderWithProviders(<App />, { route: '/projekty/p1' })
+    renderWithProviders(<App />, { route: '/projects/p1' })
 
     await userEvent.click(await screen.findByRole('button', { name: 'Rozpocznij tłumaczenie' }))
 
@@ -102,7 +102,7 @@ describe('ProjectDetailPage', () => {
       // wypisywalby "unhandled request" na kazde uruchomienie.
       http.get(`${API}/api/projects/p1/segments`, () => HttpResponse.json([])),
     )
-    renderWithProviders(<App />, { route: '/projekty/p1' })
+    renderWithProviders(<App />, { route: '/projects/p1' })
 
     expect(await screen.findByText('Rozdział pierwszy')).toBeVisible()
     // Rozdzial bez tytulu w OPF-ie i tak musi dac sie wskazac.
@@ -123,7 +123,7 @@ describe('ProjectDetailPage', () => {
         return new HttpResponse(null, { status: 204 })
       }),
     )
-    renderWithProviders(<App />, { route: '/projekty/p1' })
+    renderWithProviders(<App />, { route: '/projects/p1' })
 
     await userEvent.click(await screen.findByRole('button', { name: 'Usuń projekt' }))
 
