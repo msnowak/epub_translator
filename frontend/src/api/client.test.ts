@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { setActiveLocale } from '../i18n/activeLocale'
 import { server } from '../test/server'
 import { ApiError } from './problem'
-import { apiFetch, apiJson, onSessionLost, setAccessToken } from './client'
+import { apiFetch, apiJson, onSessionLost, refreshAccessToken, setAccessToken } from './client'
 
 const API = 'http://localhost:8000'
 
@@ -151,6 +151,23 @@ describe('apiJson', () => {
     setActiveLocale('en')
 
     await apiFetch('/api/ping')
+
+    expect(seen).toBe('en')
+  })
+
+  it('sends the active interface language on the refresh request too', async () => {
+    let seen: string | null = null
+
+    server.use(
+      http.post(`${API}/api/token/refresh`, ({ request }) => {
+        seen = request.headers.get('Accept-Language')
+
+        return HttpResponse.json({ token: 'fresh' })
+      }),
+    )
+    setActiveLocale('en')
+
+    await refreshAccessToken()
 
     expect(seen).toBe('en')
   })

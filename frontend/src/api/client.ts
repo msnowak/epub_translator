@@ -52,7 +52,7 @@ async function runRefresh(): Promise<string> {
       // Ciasteczko ma path=/api/token/refresh i httpOnly - bez tej opcji
       // przegladarka go nie dolaczy i serwer odpowie 401 mimo waznej sesji.
       credentials: 'include',
-      headers: { Accept: 'application/json' },
+      headers: { Accept: 'application/json', 'Accept-Language': getActiveLocale() },
     })
 
     if (!response.ok) {
