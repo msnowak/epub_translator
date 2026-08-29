@@ -117,7 +117,8 @@ that `docker compose --profile prod down` stops `db` along with the rest -
 expected, since `db` deliberately carries no profile of its own and belongs
 to both.
 
-Two steps are deliberately manual, both one-time (or one-time per volume):
+Two steps are deliberately manual: generating the keypair is one-time,
+running migrations is whenever one is pending.
 
 ```bash
 # The JWT signing keypair lives in the jwt_keys named volume, not on disk in
@@ -134,13 +135,13 @@ docker compose --profile prod exec backend-prod php bin/console doctrine:migrati
 **`REFRESH_COOKIE_SECURE`.** The production profile defaults this to `1`
 (`REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-1}` in `compose.yaml`), so
 the refresh-token cookie is only ever sent over TLS - the right default for a
-production deployment. Serving over plain HTTP under a hostname other than
-`localhost` is the one case where that default breaks the app: set
-`REFRESH_COOKIE_SECURE=0` in `.env` for it, or the browser silently drops the
-cookie and the session ends the moment the access token expires. The
-substitution only falls back to `1` for a variable that is genuinely absent
-from `.env`, so leave the line out (or commented, as in `.env.example`)
-everywhere else rather than setting it to an empty value.
+production deployment. Both an absent line and a blank one
+(`REFRESH_COOKIE_SECURE=`) fall back safely to `1`; the trap is setting it to
+an actual value without meaning to. Serving over plain HTTP under a hostname
+other than `localhost` is the one case where the `1` default breaks the app:
+set `REFRESH_COOKIE_SECURE=0` in `.env` for it, or the browser silently drops
+the cookie and the session ends the moment the access token expires.
+Elsewhere, leave the line out or commented, as in `.env.example`.
 
 **`VITE_API_URL` is baked into the frontend image at build time** - Vite
 resolves it while bundling, not while the container runs - so changing it
@@ -313,13 +314,13 @@ commit that drops it, so a threshold would only be decorative.
 Each of these is a decision this stage made deliberately, not an oversight:
 
 - **No end-to-end tests in a real browser.** A conscious scope decision for
-  this stage - the manual walkthrough documented in
-  [`docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md`](docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md)
-  stands in for it, and the final pass before merging to `master` is manual
-  too.
+  this stage, recorded in
+  [`docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md`](docs/superpowers/plans/2026-08-25-dlug-wejsciowy-etapu-8.md):
+  manual walkthroughs substitute for it, and the final pass before merging
+  to `master` is manual too.
 - **`TranslatedEpubBuilder` builds the whole book in memory and issues one
-  segment query per segment.** Fine for the books this has been tested
-  against; a very large book's export could exceed the request time limit.
+  segment query per segment.** A large book's export can exceed the request
+  time limit.
 - **Nothing checks that the model's answer is in the target language.**
   `TranslationValidator` polices the formatting tokens only, not the
   language of the text between them.
