@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class TokenRefreshController
 {
@@ -20,19 +21,20 @@ final class TokenRefreshController
         Request $request,
         RefreshTokenManager $refreshTokenManager,
         JWTTokenManagerInterface $jwtManager,
+        TranslatorInterface $translator,
     ): Response {
         $plainToken = $request->cookies->get(RefreshTokenManager::COOKIE_NAME);
 
         if (null === $plainToken || '' === $plainToken) {
-            return ProblemResponse::create(Response::HTTP_UNAUTHORIZED, 'Brak tokenu odświeżającego.');
+            return ProblemResponse::create(Response::HTTP_UNAUTHORIZED, $translator->trans('token.refresh_missing'));
         }
 
         try {
             [$user, $cookie] = $refreshTokenManager->rotate($plainToken);
         } catch (InvalidRefreshTokenException) {
-            // This message reaches the UI, so it is Polish and deliberately does
-            // not distinguish "unknown" from "expired".
-            return ProblemResponse::create(Response::HTTP_UNAUTHORIZED, 'Sesja wygasła. Zaloguj się ponownie.');
+            // This message reaches the UI, translated per request, and
+            // deliberately does not distinguish "unknown" from "expired".
+            return ProblemResponse::create(Response::HTTP_UNAUTHORIZED, $translator->trans('token.session_expired'));
         }
 
         $response = new JsonResponse(['token' => $jwtManager->create($user)]);

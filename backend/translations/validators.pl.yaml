@@ -1,0 +1,8 @@
+user.email.required: 'Podaj adres e-mail.'
+user.email.invalid: 'To nie jest poprawny adres e-mail.'
+user.email.taken: 'Konto z tym adresem e-mail już istnieje.'
+user.password.required: 'Podaj hasło.'
+user.password.too_short: 'Hasło musi mieć co najmniej {{ limit }} znaków.'
+project.title.required: 'Podaj tytuł projektu.'
+project.target_language.required: 'Wybierz język docelowy.'
+project.model.required: 'Wybierz model.'

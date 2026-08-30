@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Lexik's own failure handler answers {"code":401,"message":"Invalid
@@ -18,10 +19,15 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerI
  */
 final readonly class JwtAuthenticationFailureHandler implements AuthenticationFailureHandlerInterface
 {
+    public function __construct(
+        private TranslatorInterface $translator,
+    ) {
+    }
+
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): Response
     {
         // Jeden komunikat na oba przypadki: rozroznienie "nie ma takiego konta"
         // od "zle haslo" mowi obcemu, kto ma tu konto.
-        return ProblemResponse::create(Response::HTTP_UNAUTHORIZED, 'Nieprawidłowy e-mail lub hasło.');
+        return ProblemResponse::create(Response::HTTP_UNAUTHORIZED, $this->translator->trans('auth.invalid_credentials'));
     }
 }

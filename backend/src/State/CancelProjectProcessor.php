@@ -12,6 +12,7 @@ use App\Repository\SegmentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * @implements ProcessorInterface<mixed, Project>
@@ -21,6 +22,7 @@ final readonly class CancelProjectProcessor implements ProcessorInterface
     public function __construct(
         private SegmentRepository $segments,
         private EntityManagerInterface $entityManager,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -34,11 +36,11 @@ final readonly class CancelProjectProcessor implements ProcessorInterface
             // Projekt nie istnieje albo nalezy do kogos innego - OwnerExtension
             // odfiltrowal go z zapytania. Jedno i drugie ma wygladac tak samo,
             // zeby istnienie cudzego zasobu nie wyciekalo.
-            throw new NotFoundHttpException('Nie znaleziono projektu.');
+            throw new NotFoundHttpException($this->translator->trans('project.not_found'));
         }
 
         if (!$data->getStatus()->canCancel()) {
-            throw new ConflictHttpException('Tego projektu nie można teraz anulować.');
+            throw new ConflictHttpException($this->translator->trans('project.cannot_cancel'));
         }
 
         // Zajety segment wraca do puli, zeby ponowny start nie omijal go w nieskonczonosc.

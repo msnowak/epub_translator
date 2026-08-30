@@ -8,6 +8,15 @@ framework:
     #esi: true
     #fragments: true
 
+    default_locale: pl
+    enabled_locales: [pl, en]
+    # Wbudowana negocjacja Symfony ogranicza sie do enabled_locales, wiec
+    # zaden wlasny listener nie jest potrzebny.
+    set_locale_from_accept_language: true
+    translator:
+        default_path: '%kernel.project_dir%/translations'
+        fallbacks: [pl]
+
 when@test:
     framework:
         test: true

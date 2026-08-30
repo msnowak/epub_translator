@@ -14,6 +14,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * @implements ProcessorInterface<mixed, Project>
@@ -24,6 +25,7 @@ final readonly class RetryFailedSegmentsProcessor implements ProcessorInterface
         private SegmentRepository $segments,
         private EntityManagerInterface $entityManager,
         private MessageBusInterface $messageBus,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -37,11 +39,11 @@ final readonly class RetryFailedSegmentsProcessor implements ProcessorInterface
             // Projekt nie istnieje albo nalezy do kogos innego - OwnerExtension
             // odfiltrowal go z zapytania. Jedno i drugie ma wygladac tak samo,
             // zeby istnienie cudzego zasobu nie wyciekalo.
-            throw new NotFoundHttpException('Nie znaleziono projektu.');
+            throw new NotFoundHttpException($this->translator->trans('project.not_found'));
         }
 
         if (!$data->getStatus()->canRetryFailed()) {
-            throw new ConflictHttpException('Ponowienie jest możliwe dopiero po zakończeniu tłumaczenia.');
+            throw new ConflictHttpException($this->translator->trans('project.retry_not_finished'));
         }
 
         // Zerowanie budzetu prob jest tu istotne: bez tego segment, ktory go
@@ -50,7 +52,7 @@ final readonly class RetryFailedSegmentsProcessor implements ProcessorInterface
         $this->segments->resetProcessingToPending($data);
 
         if (0 === $released) {
-            throw new ConflictHttpException('Ten projekt nie ma segmentów do ponowienia.');
+            throw new ConflictHttpException($this->translator->trans('project.nothing_to_retry'));
         }
 
         $data->setStatus(ProjectStatus::Translating);

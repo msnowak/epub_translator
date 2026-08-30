@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * The only endpoint outside the JWT firewall - see AssetUrlSigner for why.
@@ -42,6 +43,7 @@ final class ProjectAssetController
         ProjectRepository $projects,
         ProjectStorage $storage,
         EpubReader $reader,
+        TranslatorInterface $translator,
     ): Response {
         $response = $this->respond(
             $id,
@@ -53,6 +55,7 @@ final class ProjectAssetController
             $projects,
             $storage,
             $reader,
+            $translator,
         );
 
         // Naglowki ida na kazda odpowiedz, takze bledna: sciezka wyjscia
@@ -75,34 +78,35 @@ final class ProjectAssetController
         ProjectRepository $projects,
         ProjectStorage $storage,
         EpubReader $reader,
+        TranslatorInterface $translator,
     ): Response {
         $token = $request->query->get('t');
 
         if (!\is_string($token) || !$signer->isValid($id, $path, $token)) {
-            return ProblemResponse::create(Response::HTTP_FORBIDDEN, 'Nieprawidłowy podpis adresu zasobu.');
+            return ProblemResponse::create(Response::HTTP_FORBIDDEN, $translator->trans('asset.invalid_signature'));
         }
 
         if (!Uuid::isValid($id)) {
-            return ProblemResponse::create(Response::HTTP_NOT_FOUND, 'Nie znaleziono zasobu.');
+            return ProblemResponse::create(Response::HTTP_NOT_FOUND, $translator->trans('asset.not_found'));
         }
 
         $project = $projects->find(Uuid::fromString($id));
 
         if (null === $project) {
-            return ProblemResponse::create(Response::HTTP_NOT_FOUND, 'Nie znaleziono zasobu.');
+            return ProblemResponse::create(Response::HTTP_NOT_FOUND, $translator->trans('asset.not_found'));
         }
 
         try {
             $package = $reader->open($storage->path($project));
         } catch (InvalidEpubException) {
-            return ProblemResponse::create(Response::HTTP_NOT_FOUND, 'Nie znaleziono zasobu.');
+            return ProblemResponse::create(Response::HTTP_NOT_FOUND, $translator->trans('asset.not_found'));
         }
 
         try {
             $resolved = $resolver->resolve($path, $package->manifestHrefs());
 
             if (null === $resolved) {
-                return ProblemResponse::create(Response::HTTP_NOT_FOUND, 'Nie znaleziono zasobu.');
+                return ProblemResponse::create(Response::HTTP_NOT_FOUND, $translator->trans('asset.not_found'));
             }
 
             $content = $package->read($resolved);
@@ -122,7 +126,7 @@ final class ProjectAssetController
 
             return $response;
         } catch (InvalidEpubException) {
-            return ProblemResponse::create(Response::HTTP_NOT_FOUND, 'Nie znaleziono zasobu.');
+            return ProblemResponse::create(Response::HTTP_NOT_FOUND, $translator->trans('asset.not_found'));
         } finally {
             // Wykona sie takze przy return powyzej.
             $package->close();

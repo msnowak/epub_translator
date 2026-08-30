@@ -48,6 +48,15 @@ abstract class ApiTestCase extends WebTestCase
         $server = [
             'CONTENT_TYPE' => $contentType ?? 'application/json',
             'HTTP_ACCEPT' => 'application/json',
+            // Symfony\Component\HttpFoundation\Request::create() bakes in
+            // 'en-us,en;q=0.5' as a default Accept-Language whenever the
+            // caller does not set one - a fixture for tests, not a real
+            // client's behaviour. Now that "en" is an enabled locale, that
+            // default would silently negotiate English for every test here
+            // that sends no header, which is the opposite of what "no
+            // header" is meant to exercise. Overriding it back to null
+            // makes "no header" in a test actually mean no header.
+            'HTTP_ACCEPT_LANGUAGE' => null,
         ];
 
         if (null !== $token) {

@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Hands over the translated book. The file is built for this one request and
@@ -37,9 +38,10 @@ final class ProjectDownloadController
         ProjectRepository $projects,
         TranslatedEpubBuilder $builder,
         Filesystem $filesystem,
+        TranslatorInterface $translator,
     ): Response {
         if (!Uuid::isValid($id)) {
-            return $this->notFound();
+            return $this->notFound($translator);
         }
 
         $project = $projects->find(Uuid::fromString($id));
@@ -47,13 +49,13 @@ final class ProjectDownloadController
         // Cudzy projekt dostaje 404, nie 403 - identyfikator nie ma
         // potwierdzac, ze taki projekt istnieje.
         if (null === $project || !$security->isGranted(ProjectVoter::VIEW, $project)) {
-            return $this->notFound();
+            return $this->notFound($translator);
         }
 
         if (!$project->getStatus()->canDownload()) {
             return ProblemResponse::create(
                 Response::HTTP_CONFLICT,
-                'Ten projekt nie ma jeszcze książki do pobrania.',
+                $translator->trans('download.nothing_yet'),
             );
         }
 
@@ -62,7 +64,7 @@ final class ProjectDownloadController
         } catch (InvalidEpubException) {
             return ProblemResponse::create(
                 Response::HTTP_NOT_FOUND,
-                'Nie udało się złożyć pliku EPUB z tego projektu.',
+                $translator->trans('download.assembly_failed'),
             );
         }
 
@@ -117,8 +119,8 @@ final class ProjectDownloadController
         return HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $name, $fallback);
     }
 
-    private function notFound(): Response
+    private function notFound(TranslatorInterface $translator): Response
     {
-        return ProblemResponse::create(Response::HTTP_NOT_FOUND, 'Nie znaleziono projektu.');
+        return ProblemResponse::create(Response::HTTP_NOT_FOUND, $translator->trans('project.not_found'));
     }
 }

@@ -1,0 +1,8 @@
+user.email.required: 'Enter an email address.'
+user.email.invalid: 'That is not a valid email address.'
+user.email.taken: 'An account with this email address already exists.'
+user.password.required: 'Enter a password.'
+user.password.too_short: 'The password must be at least {{ limit }} characters long.'
+project.title.required: 'Enter a project title.'
+project.target_language.required: 'Choose a target language.'
+project.model.required: 'Choose a model.'

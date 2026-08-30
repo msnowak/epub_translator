@@ -14,6 +14,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Segments hang off a chapter, which hangs off a project - the project still
@@ -36,6 +37,7 @@ final readonly class SegmentCollectionProvider implements ProviderInterface
         private ChapterRepository $chapters,
         private Security $security,
         private SegmentPlaceholderExposer $exposer,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -54,7 +56,7 @@ final readonly class SegmentCollectionProvider implements ProviderInterface
         };
 
         if (null === $chapter || !$this->security->isGranted(ProjectVoter::VIEW, $chapter->getProject())) {
-            throw new NotFoundHttpException('Nie znaleziono rozdziału.');
+            throw new NotFoundHttpException($this->translator->trans('chapter.not_found'));
         }
 
         $segments = $this->collectionProvider->provide($operation, $uriVariables, $context);

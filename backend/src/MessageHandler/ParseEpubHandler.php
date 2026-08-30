@@ -13,6 +13,7 @@ use App\Storage\ProjectStorage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class ParseEpubHandler
@@ -22,6 +23,7 @@ final readonly class ParseEpubHandler
         private ProjectStorage $storage,
         private ProjectStructureWriter $writer,
         private EntityManagerInterface $entityManager,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -40,10 +42,14 @@ final readonly class ParseEpubHandler
             $project->setErrorMessage(null);
         } catch (InvalidEpubException) {
             $project->setStatus(ProjectStatus::Failed);
-            // Trafia do interfejsu, wiec po polsku. Techniczny powod z wyjatku
-            // nie niesie uzytkownikowi zadnej uzytecznej informacji - plik i tak
-            // trzeba wgrac jeszcze raz.
-            $project->setErrorMessage('Nie udało się odczytać struktury pliku EPUB. Sprawdź, czy plik nie jest uszkodzony.');
+            // Trafia do interfejsu. Techniczny powod z wyjatku nie niesie
+            // uzytkownikowi zadnej uzytecznej informacji - plik i tak trzeba
+            // wgrac jeszcze raz. Ten worker dziala w oddzielnym procesie CLI,
+            // bez zadania HTTP w tle, wiec trans() rozwiazuje sie do jezyka
+            // domyslnego (pl) w produkcji - tak samo jak przed tym zadaniem.
+            // Wiadomosc leci synchronicznie w testach (config/packages/test/
+            // messenger.yaml), wiec tam dziedziczy jezyk zadania, ktore ja wyslalo.
+            $project->setErrorMessage($this->translator->trans('upload.structure_unreadable'));
         }
 
         $project->touch();

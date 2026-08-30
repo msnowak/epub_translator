@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\Operation;
 use App\Entity\SegmentStatus;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Filters both segment collections by status. Written by hand rather than
@@ -18,6 +19,11 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
  */
 final readonly class SegmentStatusFilter implements FilterInterface
 {
+    public function __construct(
+        private TranslatorInterface $translator,
+    ) {
+    }
+
     /**
      * @param class-string         $resourceClass
      * @param array<string, mixed> $context
@@ -40,7 +46,7 @@ final readonly class SegmentStatusFilter implements FilterInterface
         $status = \is_string($value) ? SegmentStatus::tryFrom($value) : null;
 
         if (null === $status) {
-            throw new BadRequestHttpException('Nieznany status akapitu.');
+            throw new BadRequestHttpException($this->translator->trans('segment.unknown_status'));
         }
 
         $alias = $queryBuilder->getRootAliases()[0];

@@ -8,6 +8,7 @@ use App\Entity\Segment;
 use App\Entity\SegmentStatus;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Translates exactly one segment and leaves it in a final state: translated, or
@@ -23,6 +24,7 @@ final readonly class SegmentTranslator
         #[Autowire('%env(int:MAX_TRANSLATION_ATTEMPTS)%')]
         private int $maxAttempts,
         private LoggerInterface $logger,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -33,7 +35,10 @@ final readonly class SegmentTranslator
     public function translate(Segment $segment, ?Segment $previous): void
     {
         $request = $this->promptBuilder->build($segment->getProject(), $segment, $previous);
-        $lastRejection = 'Model nie zwrócił poprawnego tłumaczenia tego akapitu.';
+        // Wywolywane z message handlera, ktory w produkcji dziala w oddzielnym
+        // procesie CLI bez zadania HTTP w tle - trans() rozwiazuje sie tam do
+        // jezyka domyslnego (pl), tak samo jak przed tym zadaniem.
+        $lastRejection = $this->translator->trans('segment.translation_invalid');
 
         while ($segment->getAttempts() < $this->maxAttempts) {
             // Wyjatek silnika leci wyzej, zanim policzymy probe: proba to
@@ -61,10 +66,9 @@ final readonly class SegmentTranslator
                 // Uzytkownikowi "token 2 closes out of order" nie pomoze -
                 // jedyne sensowne akcje to ponowienie albo reczna poprawka
                 // w edytorze.
-                $lastRejection = \sprintf(
-                    'Model nie zwrócił poprawnego tłumaczenia tego akapitu (%d prób).',
-                    $segment->getAttempts(),
-                );
+                $lastRejection = $this->translator->trans('segment.translation_invalid_after_attempts', [
+                    '%attempts%' => $segment->getAttempts(),
+                ]);
 
                 continue;
             }

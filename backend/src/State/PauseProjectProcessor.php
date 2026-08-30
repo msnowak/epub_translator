@@ -11,6 +11,7 @@ use App\Entity\ProjectStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * @implements ProcessorInterface<mixed, Project>
@@ -19,6 +20,7 @@ final readonly class PauseProjectProcessor implements ProcessorInterface
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -32,11 +34,11 @@ final readonly class PauseProjectProcessor implements ProcessorInterface
             // Projekt nie istnieje albo nalezy do kogos innego - OwnerExtension
             // odfiltrowal go z zapytania. Jedno i drugie ma wygladac tak samo,
             // zeby istnienie cudzego zasobu nie wyciekalo.
-            throw new NotFoundHttpException('Nie znaleziono projektu.');
+            throw new NotFoundHttpException($this->translator->trans('project.not_found'));
         }
 
         if (!$data->getStatus()->canPause()) {
-            throw new ConflictHttpException('Ten projekt nie jest w trakcie tłumaczenia.');
+            throw new ConflictHttpException($this->translator->trans('project.not_translating'));
         }
 
         // Lancuch sam zauwazy zmiane statusu przy nastepnym ogniwie i sie zakonczy.

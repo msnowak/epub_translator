@@ -14,6 +14,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ChapterPreviewController
 {
@@ -39,8 +40,9 @@ final class ChapterPreviewController
         ProjectRepository $projects,
         ChapterRepository $chapters,
         ChapterPreviewRenderer $renderer,
+        TranslatorInterface $translator,
     ): Response {
-        $response = $this->respond($id, $chapterId, $security, $projects, $chapters, $renderer);
+        $response = $this->respond($id, $chapterId, $security, $projects, $chapters, $renderer, $translator);
 
         // Naglowki ida na kazda odpowiedz, takze bledna: sciezka wyjscia
         // z kontrolera nie moze decydowac o tym, na jakich zasadach tresc
@@ -58,15 +60,16 @@ final class ChapterPreviewController
         ProjectRepository $projects,
         ChapterRepository $chapters,
         ChapterPreviewRenderer $renderer,
+        TranslatorInterface $translator,
     ): Response {
         if (!Uuid::isValid($id) || !Uuid::isValid($chapterId)) {
-            return $this->notFound();
+            return $this->notFound($translator);
         }
 
         $project = $projects->find(Uuid::fromString($id));
 
         if (null === $project || !$security->isGranted(ProjectVoter::VIEW, $project)) {
-            return $this->notFound();
+            return $this->notFound($translator);
         }
 
         $chapter = $chapters->find(Uuid::fromString($chapterId));
@@ -74,13 +77,13 @@ final class ChapterPreviewController
         // Rozdzial musi nalezec do wskazanego projektu - inaczej identyfikator
         // rozdzialu bylby furtka omijajaca kontrole wlasciciela.
         if (null === $chapter || !$chapter->getProject()->getId()->equals($project->getId())) {
-            return $this->notFound();
+            return $this->notFound($translator);
         }
 
         try {
             $html = $renderer->render($project, $chapter);
         } catch (InvalidEpubException) {
-            return ProblemResponse::create(Response::HTTP_NOT_FOUND, 'Nie udało się odczytać tego rozdziału.');
+            return ProblemResponse::create(Response::HTTP_NOT_FOUND, $translator->trans('chapter.unreadable'));
         }
 
         $response = new Response($html);
@@ -89,8 +92,8 @@ final class ChapterPreviewController
         return $response;
     }
 
-    private function notFound(): Response
+    private function notFound(TranslatorInterface $translator): Response
     {
-        return ProblemResponse::create(Response::HTTP_NOT_FOUND, 'Nie znaleziono rozdziału.');
+        return ProblemResponse::create(Response::HTTP_NOT_FOUND, $translator->trans('chapter.not_found'));
     }
 }

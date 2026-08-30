@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Ollama\OllamaUnavailableException;
 use App\Tests\Support\FakeTranslationEngine;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\TestTranslator;
 use App\Translation\PromptBuilder;
 use App\Translation\SegmentTranslator;
 use App\Translation\TranslationEngineException;
@@ -197,6 +198,7 @@ final class SegmentTranslatorTest extends TestCase
             new TranslationValidator(),
             $maxAttempts,
             $logger ?? new RecordingLogger(),
+            TestTranslator::create(),
         );
     }
 

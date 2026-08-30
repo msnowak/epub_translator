@@ -15,6 +15,7 @@ use App\Translation\TranslationValidator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * A human correction goes through the same token validator as a model answer.
@@ -30,6 +31,7 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
         private TranslationValidator $validator,
         private EntityManagerInterface $entityManager,
         private SegmentPlaceholderExposer $exposer,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -40,13 +42,13 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Segment
     {
         if (!$data instanceof Segment) {
-            throw new NotFoundHttpException('Nie znaleziono segmentu.');
+            throw new NotFoundHttpException($this->translator->trans('segment.not_found'));
         }
 
         $translation = $data->getTranslatedText();
 
         if (null === $translation) {
-            throw new UnprocessableEntityHttpException('Podaj treść tłumaczenia.');
+            throw new UnprocessableEntityHttpException($this->translator->trans('segment.rejected.empty'));
         }
 
         try {
@@ -72,9 +74,9 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
      */
     private function detailFor(TranslationRejectedException $exception): string
     {
-        return match ($exception->reason) {
-            TranslationRejectionReason::Empty => 'Podaj treść tłumaczenia.',
-            TranslationRejectionReason::TokenIntegrity => 'Tłumaczenie musi zawierać te same znaczniki formatowania co oryginał, prawidłowo zagnieżdżone.',
+        $key = match ($exception->reason) {
+            TranslationRejectionReason::Empty => 'segment.rejected.empty',
+            TranslationRejectionReason::TokenIntegrity => 'segment.rejected.token_integrity',
             // validate() nigdy nie zglasza echa - sprawdza je wylacznie
             // assertNotEchoed(), ktorej ten procesor celowo nie wola. Gdyby
             // kiedys ta galaz stala sie osiagalna, cichy komunikat o zetonach
@@ -85,5 +87,7 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
                 'TranslationRejectionReason::Echo must never reach UpdateSegmentProcessor: the echo rule is an engine-path check (see TranslationValidator::assertNotEchoed()), not a data-integrity failure a human edit can trigger.',
             ),
         };
+
+        return $this->translator->trans($key);
     }
 }

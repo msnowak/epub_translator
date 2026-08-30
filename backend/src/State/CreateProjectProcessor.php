@@ -20,6 +20,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * @implements ProcessorInterface<mixed, Project>
@@ -33,6 +34,7 @@ final readonly class CreateProjectProcessor implements ProcessorInterface
         private UploadedEpubValidator $epubValidator,
         private ProjectStorage $storage,
         private MessageBusInterface $messageBus,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -57,13 +59,13 @@ final readonly class CreateProjectProcessor implements ProcessorInterface
         $file = $request->files->get('file');
 
         if (!$file instanceof UploadedFile) {
-            throw new UnprocessableEntityHttpException('Nie wybrano pliku do wgrania.');
+            throw new UnprocessableEntityHttpException($this->translator->trans('upload.no_file'));
         }
 
         try {
             $this->epubValidator->validate($file->getPathname());
         } catch (InvalidEpubException) {
-            throw new UnprocessableEntityHttpException('Ten plik nie jest poprawnym dokumentem EPUB.');
+            throw new UnprocessableEntityHttpException($this->translator->trans('upload.not_epub'));
         }
 
         $project = new Project(

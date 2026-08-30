@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * @implements ProcessorInterface<mixed, Segment>
@@ -26,6 +27,7 @@ final readonly class RetranslateSegmentProcessor implements ProcessorInterface
         private SegmentRepository $segments,
         private MessageBusInterface $messageBus,
         private SegmentPlaceholderExposer $exposer,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -36,13 +38,13 @@ final readonly class RetranslateSegmentProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Segment
     {
         if (!$data instanceof Segment) {
-            throw new NotFoundHttpException('Nie znaleziono segmentu.');
+            throw new NotFoundHttpException($this->translator->trans('segment.not_found'));
         }
 
         if (SegmentStatus::Processing === $data->getStatus()) {
             // Lancuch juz nad nim pracuje; dwa tlumaczenia bilyby sie o ten
             // sam wiersz.
-            throw new ConflictHttpException('Ten akapit jest właśnie tłumaczony.');
+            throw new ConflictHttpException($this->translator->trans('segment.already_translating'));
         }
 
         // Budzet prob liczy sie od nowa - inaczej segment, ktory go wyczerpal,

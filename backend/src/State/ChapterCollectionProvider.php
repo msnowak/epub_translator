@@ -13,6 +13,7 @@ use App\Security\ProjectVoter;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Chapters hang off a project, so the project decides who may see them. A
@@ -27,6 +28,7 @@ final readonly class ChapterCollectionProvider implements ProviderInterface
         private ProjectRepository $projects,
         private ChapterRepository $chapters,
         private Security $security,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -50,7 +52,7 @@ final readonly class ChapterCollectionProvider implements ProviderInterface
         };
 
         if (null === $project || !$this->security->isGranted(ProjectVoter::VIEW, $project)) {
-            throw new NotFoundHttpException('Nie znaleziono projektu.');
+            throw new NotFoundHttpException($this->translator->trans('project.not_found'));
         }
 
         $chapters = $this->chapters->findForProjectInSpineOrder($project);
