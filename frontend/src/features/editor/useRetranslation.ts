@@ -28,6 +28,18 @@ export function useRetranslation(chapterId: string, onPreview: (segmentId: strin
     awaitingRef.current = awaiting
   }, [awaiting])
 
+  // Ten sam powod co przy awaitingRef ponizej efektu z interwalem: "t" zmienia
+  // tozsamosc przy kazdej zmianie jezyka, a interwal ma sie zbroic od nowa
+  // tylko wtedy, gdy hasAwaiting faktycznie sie zmieni (patrz komentarz przy
+  // tablicy zaleznosci tamtego efektu) - nie przy kazdym przelaczeniu jezyka
+  // w trakcie trwajacego pollingu. Ref trzyma najnowsze "t" poza ta tablica,
+  // catch() ponizej czyta je przez tRef.current zamiast domykac stara wartosc.
+  const tRef = useRef(t)
+
+  useEffect(() => {
+    tRef.current = t
+  }, [t])
+
   const write = useCallback(
     (segment: Segment) => {
       queryClient.setQueryData<Segment[]>(['segments', chapterId], (current) =>
@@ -106,7 +118,7 @@ export function useRetranslation(chapterId: string, onPreview: (segmentId: strin
             // Cichy nieudany odczyt polowalby bez konca i bez sladu na
             // ekranie - lepiej przerwac odpytywanie tego akapitu i pokazac,
             // co poszlo nie tak, niz probowac w nieskonczonosc.
-            setError(failure instanceof ApiError ? failure.detail : t('editor.error.status'))
+            setError(failure instanceof ApiError ? failure.detail : tRef.current('editor.error.status'))
 
             setAwaiting((current) => {
               const next = new Set(current)
@@ -125,8 +137,11 @@ export function useRetranslation(chapterId: string, onPreview: (segmentId: strin
     }
     // Zaleznosc po hasAwaiting (bool), nie po samym awaiting (Set) - inny
     // Set przy kazdym dodaniu/usunieciu przezbrajalby interwal od nowa i
-    // przesuwal czas kolejnego ticku dla akapitow juz oczekujacych.
-  }, [hasAwaiting, write, invalidateFailedList, onPreview, t])
+    // przesuwal czas kolejnego ticku dla akapitow juz oczekujacych. Z tego
+    // samego powodu nie ma tu "t" - w catch() ponizej czytane jest przez
+    // tRef.current, zeby przelaczenie jezyka w trakcie pollingu tez nie
+    // zbroilo interwalu od nowa.
+  }, [hasAwaiting, write, invalidateFailedList, onPreview])
 
   const retranslate = useCallback(
     (segmentId: string) => {
