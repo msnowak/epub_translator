@@ -1,14 +1,16 @@
 import { Button } from '@/components/ui/button'
 import type { Segment } from '../../api/types'
+import type { SimpleKey } from '../../i18n/messages'
+import { useT } from '../../i18n/useT'
 import { type SaveState, useSegmentEditor } from './useSegmentEditor'
 
-const STATE_LABELS: Record<SaveState, string> = {
-  clean: '',
-  dirty: 'Niezapisane…',
-  saving: 'Zapisywanie…',
-  saved: 'Zapisano',
-  blocked: '',
-  error: '',
+const STATE_KEYS: Record<SaveState, SimpleKey | null> = {
+  clean: null,
+  dirty: 'editor.state.dirty',
+  saving: 'editor.state.saving',
+  saved: 'editor.state.saved',
+  blocked: null,
+  error: null,
 }
 
 interface Props {
@@ -22,8 +24,10 @@ interface Props {
 }
 
 export function SegmentRow({ segment, chapterId, active, onPreview, onActivate, onRetranslate, onDirtyChange }: Props) {
+  const { t } = useT()
   const { value, state, message, change } = useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange })
   const failed = 'failed' === segment.status
+  const stateKey = STATE_KEYS[state]
 
   return (
     <div className={`grid grid-cols-2 gap-4 border-b p-4 ${active ? 'bg-neutral-50' : ''}`}>
@@ -33,17 +37,17 @@ export function SegmentRow({ segment, chapterId, active, onPreview, onActivate, 
         <textarea
           className="min-h-24 w-full resize-y rounded-md border p-2 text-sm"
           value={value}
-          aria-label={`Tłumaczenie akapitu ${segment.position + 1}`}
+          aria-label={t('editor.row.label', { position: segment.position + 1 })}
           onFocus={() => onActivate(segment.id)}
           onChange={(event) => change(event.target.value)}
         />
 
         <div className="flex items-center justify-between gap-2 text-xs">
           <span className={'error' === state || 'blocked' === state ? 'text-red-600' : 'text-neutral-500'}>
-            {message ?? STATE_LABELS[state]}
+            {message ?? (null === stateKey ? '' : t(stateKey))}
           </span>
           <Button variant="ghost" size="sm" onClick={() => onRetranslate(segment.id)}>
-            Przetłumacz ponownie
+            {t('editor.row.retranslate')}
           </Button>
         </div>
 

@@ -167,7 +167,7 @@ export function EditorPage() {
 
     return (
       <p className="p-4 text-red-600">
-        {error instanceof ApiError ? error.detail : 'Nie udało się połączyć z serwerem.'}
+        {error instanceof ApiError ? error.detail : t('common.networkError')}
       </p>
     )
   }
@@ -175,7 +175,7 @@ export function EditorPage() {
   return (
     <div className="grid h-full grid-cols-[14rem_minmax(0,1fr)_minmax(0,1.35fr)]">
       {chapters.isPending ? (
-        <p className="p-3 text-neutral-500">Wczytywanie…</p>
+        <p className="p-3 text-neutral-500">{t('common.loading')}</p>
       ) : (
         <ChapterNav projectId={id} chapters={chapters.data ?? []} currentId={chapterId} />
       )}
@@ -183,13 +183,13 @@ export function EditorPage() {
       <section className="flex h-full flex-col overflow-hidden">
         <header className="flex flex-col gap-2 border-b p-3">
           <Link className="text-sm underline" to={`/projects/${id}`}>
-            ← {project.data?.title ?? 'Książka'}
+            ← {project.data?.title ?? t('editor.bookFallback')}
           </Link>
-          <h1 className="text-lg font-medium">{null === chapter ? 'Rozdział' : chapterLabel(chapter, t)}</h1>
+          <h1 className="text-lg font-medium">{null === chapter ? t('editor.chapterFallback') : chapterLabel(chapter, t)}</h1>
 
           {'translating' === project.data?.status ? (
             <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-sm">
-              <span>Tłumaczenie tej książki trwa — nowe akapity nie pojawią się same.</span>
+              <span>{t('editor.translatingNotice')}</span>
               <Button
                 size="sm"
                 variant="outline"
@@ -203,7 +203,7 @@ export function EditorPage() {
                   void preview.refetch()
                 }}
               >
-                Wczytaj ponownie
+                {t('editor.reload')}
               </Button>
             </div>
           ) : null}
@@ -211,7 +211,7 @@ export function EditorPage() {
           {null !== saveError.data ? <p className="text-sm text-red-600">{saveError.data}</p> : null}
 
           <Button size="sm" variant={onlyFailed ? 'default' : 'outline'} onClick={() => setOnlyFailed(!onlyFailed)}>
-            {onlyFailed ? 'Wszystkie akapity' : 'Tylko nieudane'}
+            {onlyFailed ? t('editor.showAll') : t('editor.showFailedOnly')}
           </Button>
         </header>
 
@@ -220,10 +220,10 @@ export function EditorPage() {
         ) : null}
 
         {segments.isPending ? (
-          <p className="p-4 text-neutral-500">Wczytywanie…</p>
+          <p className="p-4 text-neutral-500">{t('common.loading')}</p>
         ) : 0 === visible.length ? (
           <p className="p-4 text-neutral-600">
-            {onlyFailed ? 'W tym rozdziale nie ma nieudanych akapitów.' : 'Ten rozdział nie ma akapitów.'}
+            {onlyFailed ? t('editor.emptyFailed') : t('editor.emptyChapter')}
           </p>
         ) : (
           <SegmentList

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setAccessToken } from '../../api/client'
 import type { Segment } from '../../api/types'
+import { LocaleProvider } from '../../i18n/LocaleProvider'
 import { server } from '../../test/server'
 import { useSegmentEditor } from './useSegmentEditor'
 
@@ -26,7 +27,11 @@ const segment: Segment = {
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
 
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  return (
+    <LocaleProvider initial="pl">
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    </LocaleProvider>
+  )
 }
 
 describe('useSegmentEditor', () => {
@@ -113,7 +118,11 @@ describe('useSegmentEditor', () => {
     const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
 
     function localWrapper({ children }: { children: ReactNode }) {
-      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      return (
+        <LocaleProvider initial="pl">
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        </LocaleProvider>
+      )
     }
 
     const { result } = renderHook(
@@ -145,7 +154,11 @@ describe('useSegmentEditor', () => {
     client.setQueryData(['segments', 'save-error', 'ch-1'], 'Stary błąd sprzed 5 minut.')
 
     function localWrapper({ children }: { children: ReactNode }) {
-      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      return (
+        <LocaleProvider initial="pl">
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        </LocaleProvider>
+      )
     }
 
     renderHook(() => useSegmentEditor({ segment, chapterId: 'ch-1', onPreview: vi.fn() }), {
@@ -169,7 +182,11 @@ describe('useSegmentEditor', () => {
     const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
 
     function localWrapper({ children }: { children: ReactNode }) {
-      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      return (
+        <LocaleProvider initial="pl">
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        </LocaleProvider>
+      )
     }
 
     const { result } = renderHook(
@@ -367,7 +384,11 @@ describe('useSegmentEditor', () => {
     client.setQueryData(['segments', 'ch-1'], [segment])
 
     function localWrapper({ children }: { children: ReactNode }) {
-      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      return (
+        <LocaleProvider initial="pl">
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        </LocaleProvider>
+      )
     }
 
     server.use(
@@ -404,7 +425,11 @@ describe('useSegmentEditor', () => {
     const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
 
     function localWrapper({ children }: { children: ReactNode }) {
-      return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      return (
+        <LocaleProvider initial="pl">
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        </LocaleProvider>
+      )
     }
 
     server.use(

@@ -1,4 +1,5 @@
 import type { RefObject } from 'react'
+import { useT } from '../../i18n/useT'
 import { readSegmentId } from './preview'
 
 interface Props {
@@ -8,14 +9,16 @@ interface Props {
 }
 
 export function PreviewPane({ html, frameRef, onSegmentClick }: Props) {
+  const { t } = useT()
+
   if (null === html) {
-    return <p className="p-4 text-neutral-500">Wczytywanie podglądu…</p>
+    return <p className="p-4 text-neutral-500">{t('editor.preview.loading')}</p>
   }
 
   return (
     <iframe
       ref={frameRef}
-      title="Podgląd rozdziału"
+      title={t('editor.preview.title')}
       // Bez allow-scripts nic z ksiazki sie nie wykona; allow-same-origin jest
       // tu wylacznie po to, zeby rodzic siegnal do contentDocument i podmienil
       // jeden wezel zamiast przeladowywac rozdzial.

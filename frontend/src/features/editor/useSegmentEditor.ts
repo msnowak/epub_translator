@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../api/problem'
 import { updateSegment } from '../../api/segments'
 import type { Segment } from '../../api/types'
+import { useT } from '../../i18n/useT'
 import { detokenize, tokenSignature } from './detokenize'
 
 /** Podglad wyprzedza zapis: zmiane widac, zanim zdazy sie zapisac. */
@@ -22,6 +23,7 @@ interface Options {
 }
 
 export function useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange }: Options) {
+  const { t } = useT()
   const queryClient = useQueryClient()
   const [value, setValue] = useState(segment.translatedText ?? '')
   const [state, setState] = useState<SaveState>('clean')
@@ -93,7 +95,7 @@ export function useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange 
 
   const reportError = useCallback(
     (error: unknown) => {
-      const detail = error instanceof ApiError ? error.detail : 'Nie udało się zapisać zmiany.'
+      const detail = error instanceof ApiError ? error.detail : t('editor.error.save')
 
       if (mounted.current) {
         setState('error')
@@ -111,7 +113,7 @@ export function useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange 
       markDirty(false)
       queryClient.setQueryData<string | null>(['segments', 'save-error', chapterId], detail)
     },
-    [chapterId, markDirty, queryClient],
+    [chapterId, markDirty, queryClient, t],
   )
 
   const mutation = useMutation({
@@ -157,7 +159,7 @@ export function useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange 
         // Backend odrzuci to z 422; nie ma po co go pytac, dopoki uzytkownik
         // jest w polowie poprawiania znacznika.
         setState('blocked')
-        setMessage('Niezapisane — tłumaczenie musi mieć te same znaczniki co oryginał.')
+        setMessage(t('editor.error.tokens'))
 
         return
       }
@@ -172,7 +174,7 @@ export function useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange 
         mutation.mutate({ text: next })
       }, SAVE_DELAY_MS)
     },
-    [markDirty, mutation, onPreview, segment.id, segment.previewPlaceholders, segment.sourceText],
+    [markDirty, mutation, onPreview, segment.id, segment.previewPlaceholders, segment.sourceText, t],
   )
 
   useEffect(() => {

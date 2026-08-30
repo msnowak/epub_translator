@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../api/problem'
 import { getSegment, retranslateSegment } from '../../api/segments'
 import type { Segment } from '../../api/types'
+import { useT } from '../../i18n/useT'
 import { detokenize } from './detokenize'
 
 const POLL_MS = 2000
@@ -13,6 +14,7 @@ const POLL_MS = 2000
  * segment at a time, never the whole chapter.
  */
 export function useRetranslation(chapterId: string, onPreview: (segmentId: string, html: string) => void) {
+  const { t } = useT()
   const queryClient = useQueryClient()
   const [awaiting, setAwaiting] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
@@ -57,7 +59,7 @@ export function useRetranslation(chapterId: string, onPreview: (segmentId: strin
       setAwaiting((current) => new Set(current).add(segment.id))
     },
     onError: (failure: unknown) => {
-      setError(failure instanceof ApiError ? failure.detail : 'Nie udało się ponowić tłumaczenia.')
+      setError(failure instanceof ApiError ? failure.detail : t('editor.error.retranslate'))
     },
   })
 
@@ -104,7 +106,7 @@ export function useRetranslation(chapterId: string, onPreview: (segmentId: strin
             // Cichy nieudany odczyt polowalby bez konca i bez sladu na
             // ekranie - lepiej przerwac odpytywanie tego akapitu i pokazac,
             // co poszlo nie tak, niz probowac w nieskonczonosc.
-            setError(failure instanceof ApiError ? failure.detail : 'Nie udało się sprawdzić stanu akapitu.')
+            setError(failure instanceof ApiError ? failure.detail : t('editor.error.status'))
 
             setAwaiting((current) => {
               const next = new Set(current)
@@ -124,7 +126,7 @@ export function useRetranslation(chapterId: string, onPreview: (segmentId: strin
     // Zaleznosc po hasAwaiting (bool), nie po samym awaiting (Set) - inny
     // Set przy kazdym dodaniu/usunieciu przezbrajalby interwal od nowa i
     // przesuwal czas kolejnego ticku dla akapitow juz oczekujacych.
-  }, [hasAwaiting, write, invalidateFailedList, onPreview])
+  }, [hasAwaiting, write, invalidateFailedList, onPreview, t])
 
   const retranslate = useCallback(
     (segmentId: string) => {

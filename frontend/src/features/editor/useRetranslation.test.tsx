@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setAccessToken } from '../../api/client'
 import type { Segment } from '../../api/types'
+import { LocaleProvider } from '../../i18n/LocaleProvider'
 import { server } from '../../test/server'
 import { useRetranslation } from './useRetranslation'
 
@@ -32,7 +33,11 @@ function createWrapper() {
   client.setQueryData(['segments', 'ch-1'], [segment])
 
   function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    return (
+      <LocaleProvider initial="pl">
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      </LocaleProvider>
+    )
   }
 
   return { Wrapper, client }

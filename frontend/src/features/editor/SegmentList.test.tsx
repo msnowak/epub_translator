@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Segment } from '../../api/types'
+import { LocaleProvider } from '../../i18n/LocaleProvider'
 import { captureScrollToIndex, resetScrollToIndexSpy, scrollToIndexSpy } from '../../test/segmentListVirtualizer'
 import { stubLayoutForVirtualization } from '../../test/virtualization'
 import { SegmentList } from './SegmentList'
@@ -46,7 +47,11 @@ function renderList(
   const client = new QueryClient()
 
   function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    return (
+      <LocaleProvider initial="pl">
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      </LocaleProvider>
+    )
   }
 
   return render(
