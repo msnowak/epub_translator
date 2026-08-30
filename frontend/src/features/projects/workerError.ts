@@ -1,6 +1,8 @@
 import type { MessageKey, Params, Translate } from '../../i18n/messages'
 
-const KEYS: Record<string, MessageKey> = {
+// Eksportowane, zeby workerError.test.ts moglo przypilnowac zgodnosci tej
+// mapy z backend/src/Entity/WorkerError.php - patrz komentarz przy tescie.
+export const KEYS: Record<string, MessageKey> = {
   epub_unreadable: 'workerError.epub_unreadable',
   ollama_unreachable_project: 'workerError.ollama_unreachable_project',
   ollama_unreachable_segment: 'workerError.ollama_unreachable_segment',
