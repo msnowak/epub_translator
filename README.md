@@ -510,3 +510,19 @@ docker compose up -d --force-recreate <service>
 
 `--force-recreate` replaces the container, not its volumes — named volumes
 (the database, the JWT keys) are untouched.
+
+## License
+
+MIT - see [LICENSE](LICENSE).
+
+The dependencies are all under permissive licences (MIT, ISC, BSD, Apache-2.0
+and, for the Geist font, the SIL Open Font License); nothing in the tree is
+copyleft in a way that reaches this code.
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) carries their attribution,
+which matters once you publish the built bundle or the images rather than
+just running this locally.
+
+One thing the licence does not cover: the model. Ollama and the model weights
+are not distributed with this project, and the model you pull comes with its
+own terms - `llama3.1:8b`, the default, is under the Llama 3.1 Community
+License and not an open-source licence in the OSI sense.
