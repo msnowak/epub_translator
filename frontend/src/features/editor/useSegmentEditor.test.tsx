@@ -19,7 +19,8 @@ const segment: Segment = {
   sourceText: 'A [1]word[/1].',
   translatedText: 'Jakieś [1]słowo[/1].',
   status: 'translated',
-  errorMessage: null,
+  errorCode: null,
+  errorParams: null,
   previewPlaceholders: { '1': '<em>' },
   chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
 }

@@ -4,6 +4,7 @@ import { ApiError } from '../../api/problem'
 import { listProjectSegments } from '../../api/segments'
 import { useT } from '../../i18n/useT'
 import { chapterLabel } from './chapterLabel'
+import { workerErrorMessage } from './workerError'
 
 export function FailedSegments({ projectId }: { projectId: string }) {
   const { t } = useT()
@@ -30,19 +31,23 @@ export function FailedSegments({ projectId }: { projectId: string }) {
 
   return (
     <ul className="flex flex-col gap-2">
-      {data.map((segment) => (
-        <li key={segment.id} className="rounded-md border border-red-200 bg-red-50 p-3 text-sm">
-          <Link
-            className="font-medium underline"
-            // Edytor odczyta ?paragraph= i przewinie do tego wiersza.
-            to={`/projects/${projectId}/chapters/${segment.chapter.id}?paragraph=${segment.id}`}
-          >
-            {t('failed.link', { chapter: chapterLabel(segment.chapter, t), position: segment.position + 1 })}
-          </Link>
-          <p className="mt-1 text-neutral-700">{segment.sourceText.slice(0, 160)}</p>
-          {null !== segment.errorMessage ? <p className="mt-1 text-red-700">{segment.errorMessage}</p> : null}
-        </li>
-      ))}
+      {data.map((segment) => {
+        const message = workerErrorMessage(segment.errorCode, segment.errorParams, t)
+
+        return (
+          <li key={segment.id} className="rounded-md border border-red-200 bg-red-50 p-3 text-sm">
+            <Link
+              className="font-medium underline"
+              // Edytor odczyta ?paragraph= i przewinie do tego wiersza.
+              to={`/projects/${projectId}/chapters/${segment.chapter.id}?paragraph=${segment.id}`}
+            >
+              {t('failed.link', { chapter: chapterLabel(segment.chapter, t), position: segment.position + 1 })}
+            </Link>
+            <p className="mt-1 text-neutral-700">{segment.sourceText.slice(0, 160)}</p>
+            {null !== message ? <p className="mt-1 text-red-700">{message}</p> : null}
+          </li>
+        )
+      })}
     </ul>
   )
 }

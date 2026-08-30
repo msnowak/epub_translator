@@ -22,7 +22,8 @@ export interface Project {
   customPrompt: string | null
   status: ProjectStatus
   originalFilename: string
-  errorMessage: string | null
+  errorCode: string | null
+  errorParams: Record<string, string | number> | null
   createdAt: string
   updatedAt: string
   segmentCounts: SegmentCounts
@@ -51,7 +52,8 @@ export interface Segment {
   sourceText: string
   translatedText: string | null
   status: SegmentStatus
-  errorMessage: string | null
+  errorCode: string | null
+  errorParams: Record<string, string | number> | null
   /** The opening markup each token stands for, already sanitized by the backend so it is safe to inject into the preview document. */
   previewPlaceholders: Record<string, string>
   chapter: SegmentChapter

@@ -19,7 +19,8 @@ const segment: Segment = {
   sourceText: 'Source.',
   translatedText: null,
   status: 'failed',
-  errorMessage: 'Model nie odpowiedział.',
+  errorCode: 'ollama_unreachable_segment',
+  errorParams: null,
   previewPlaceholders: {},
   chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
 }
@@ -61,7 +62,7 @@ describe('useRetranslation', () => {
         return HttpResponse.json(
           reads < 2
             ? { ...segment, status: 'processing' }
-            : { ...segment, status: 'translated', translatedText: 'Gotowe.', errorMessage: null },
+            : { ...segment, status: 'translated', translatedText: 'Gotowe.', errorCode: null, errorParams: null },
         )
       }),
     )
@@ -102,7 +103,7 @@ describe('useRetranslation', () => {
         HttpResponse.json({ ...segment, status: 'processing' }),
       ),
       http.get(`${API}/api/segments/seg-1`, () =>
-        HttpResponse.json({ ...segment, status: 'translated', translatedText: 'Gotowe.', errorMessage: null }),
+        HttpResponse.json({ ...segment, status: 'translated', translatedText: 'Gotowe.', errorCode: null, errorParams: null }),
       ),
     )
 

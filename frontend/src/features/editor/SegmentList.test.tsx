@@ -33,7 +33,8 @@ function segments(count: number): Segment[] {
     sourceText: `Paragraph ${index}.`,
     translatedText: `Akapit ${index}.`,
     status: 'translated' as const,
-    errorMessage: null,
+    errorCode: null,
+    errorParams: null,
     previewPlaceholders: {},
     chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
   }))

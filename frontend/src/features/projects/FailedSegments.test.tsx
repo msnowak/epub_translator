@@ -27,7 +27,8 @@ describe('FailedSegments', () => {
             sourceText: 'A paragraph that broke.',
             translatedText: null,
             status: 'failed',
-            errorMessage: 'Model nie odpowiedział.',
+            errorCode: 'ollama_unreachable_segment',
+            errorParams: null,
             previewPlaceholders: [],
             chapter: { id: 'ch-2', spineOrder: 1, title: null },
           },
@@ -40,7 +41,9 @@ describe('FailedSegments', () => {
     const link = await screen.findByRole('link', { name: /Rozdział 2/ })
 
     expect(link).toHaveAttribute('href', '/projects/p/chapters/ch-2?paragraph=seg-9')
-    expect(screen.getByText('Model nie odpowiedział.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Serwer Ollama jest nieosiągalny. Sprawdź, czy działa, i spróbuj ponownie.'),
+    ).toBeInTheDocument()
   })
 
   it('says nothing failed when nothing failed', async () => {

@@ -8,6 +8,7 @@ import { FailedSegments } from './FailedSegments'
 import { ProgressBar } from './ProgressBar'
 import { ProjectActions } from './ProjectActions'
 import { PROJECT_STATUS_KEYS, failedCount, isBusy } from './status'
+import { workerErrorMessage } from './workerError'
 
 export function ProjectDetailPage() {
   const { t } = useT()
@@ -39,6 +40,7 @@ export function ProjectDetailPage() {
   }
 
   const failed = failedCount(data)
+  const message = workerErrorMessage(data.errorCode, data.errorParams, t)
 
   return (
     <section className="flex flex-col gap-6">
@@ -56,10 +58,8 @@ export function ProjectDetailPage() {
         {failed > 0 ? (
           <p className="text-sm text-red-600">{t('projects.detail.failedNotice', { count: failed })}</p>
         ) : null}
-        {null !== data.errorMessage ? (
-          <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {data.errorMessage}
-          </p>
+        {null !== message ? (
+          <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{message}</p>
         ) : null}
       </div>
 

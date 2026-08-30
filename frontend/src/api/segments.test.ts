@@ -56,7 +56,8 @@ const base = {
   sourceText: 'Source.',
   translatedText: null,
   status: 'pending',
-  errorMessage: null,
+  errorCode: null,
+  errorParams: null,
   previewPlaceholders: {},
   chapter: { id: 'ch-1', spineOrder: 0, title: 'Rozdział pierwszy' },
 }

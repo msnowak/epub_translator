@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import type { Segment } from '../../api/types'
 import type { SimpleKey } from '../../i18n/messages'
 import { useT } from '../../i18n/useT'
+import { workerErrorMessage } from '../projects/workerError'
 import { type SaveState, useSegmentEditor } from './useSegmentEditor'
 
 const STATE_KEYS: Record<SaveState, SimpleKey | null> = {
@@ -28,6 +29,7 @@ export function SegmentRow({ segment, chapterId, active, onPreview, onActivate, 
   const { value, state, message, change } = useSegmentEditor({ segment, chapterId, onPreview, onDirtyChange })
   const failed = 'failed' === segment.status
   const stateKey = STATE_KEYS[state]
+  const workerMessage = workerErrorMessage(segment.errorCode, segment.errorParams, t)
 
   return (
     <div className={`grid grid-cols-2 gap-4 border-b p-4 ${active ? 'bg-neutral-50' : ''}`}>
@@ -51,9 +53,7 @@ export function SegmentRow({ segment, chapterId, active, onPreview, onActivate, 
           </Button>
         </div>
 
-        {failed && null !== segment.errorMessage ? (
-          <p className="text-xs text-red-600">{segment.errorMessage}</p>
-        ) : null}
+        {failed && null !== workerMessage ? <p className="text-xs text-red-600">{workerMessage}</p> : null}
       </div>
     </div>
   )
