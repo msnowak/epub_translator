@@ -154,7 +154,7 @@ class Project
     private User $owner;
 
     #[ORM\Column(length: 255)]
-    #[Assert\NotBlank(message: 'Podaj tytuł projektu.')]
+    #[Assert\NotBlank(message: 'project.title.required')]
     #[Groups(['project:read', 'project:write'])]
     private string $title;
 
@@ -163,12 +163,12 @@ class Project
     private ?string $sourceLanguage = null;
 
     #[ORM\Column(length: 16)]
-    #[Assert\NotBlank(message: 'Wybierz język docelowy.')]
+    #[Assert\NotBlank(message: 'project.target_language.required')]
     #[Groups(['project:read', 'project:write'])]
     private string $targetLanguage;
 
     #[ORM\Column(length: 128)]
-    #[Assert\NotBlank(message: 'Wybierz model.')]
+    #[Assert\NotBlank(message: 'project.model.required')]
     #[Groups(['project:read', 'project:write'])]
     private string $ollamaModel;
 

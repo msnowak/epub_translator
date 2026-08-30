@@ -19,7 +19,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
-#[UniqueEntity(fields: ['email'], message: 'Konto z tym adresem e-mail już istnieje.')]
+#[UniqueEntity(fields: ['email'], message: 'user.email.taken')]
 #[ApiResource(
     operations: [
         new Post(
@@ -40,8 +40,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private Uuid $id;
 
     #[ORM\Column(length: 180, unique: true)]
-    #[Assert\NotBlank(message: 'Podaj adres e-mail.')]
-    #[Assert\Email(message: 'To nie jest poprawny adres e-mail.')]
+    #[Assert\NotBlank(message: 'user.email.required')]
+    #[Assert\Email(message: 'user.email.invalid')]
     #[Groups(['user:read', 'user:write'])]
     private string $email = '';
 
@@ -59,8 +59,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * Never persisted - only carries the password from the registration form.
      */
-    #[Assert\NotBlank(message: 'Podaj hasło.', groups: ['registration'])]
-    #[Assert\Length(min: 8, minMessage: 'Hasło musi mieć co najmniej {{ limit }} znaków.', groups: ['registration'])]
+    #[Assert\NotBlank(message: 'user.password.required', groups: ['registration'])]
+    #[Assert\Length(min: 8, minMessage: 'user.password.too_short', groups: ['registration'])]
     #[Groups(['user:write'])]
     private ?string $plainPassword = null;
 

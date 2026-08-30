@@ -57,4 +57,36 @@ final class LocaleNegotiationTest extends WebTestCase
             json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR)['detail'],
         );
     }
+
+    public function testValidationMessagesFollowTheHeader(): void
+    {
+        $client = static::createClient();
+        $client->request('POST', '/api/register', server: [
+            'HTTP_ACCEPT_LANGUAGE' => 'en',
+            'CONTENT_TYPE' => 'application/ld+json',
+        ], content: json_encode(['email' => 'not-an-email', 'plainPassword' => 'x'], \JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertStringContainsString(
+            'That is not a valid email address.',
+            (string) $client->getResponse()->getContent(),
+        );
+    }
+
+    public function testValidationMessagesFallBackToPolishWithNoHeader(): void
+    {
+        $client = static::createClient();
+        $client->request('POST', '/api/register', server: [
+            'CONTENT_TYPE' => 'application/ld+json',
+            // See the comment in testNoHeaderFallsBackToPolish() above: the
+            // test client bakes in an English default unless this is reset.
+            'HTTP_ACCEPT_LANGUAGE' => null,
+        ], content: json_encode(['email' => 'not-an-email', 'plainPassword' => 'x'], \JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertStringContainsString(
+            'To nie jest poprawny adres e-mail.',
+            (string) $client->getResponse()->getContent(),
+        );
+    }
 }
