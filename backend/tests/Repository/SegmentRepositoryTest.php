@@ -8,6 +8,7 @@ use App\Entity\Chapter;
 use App\Entity\Project;
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
+use App\Entity\WorkerError;
 use App\Repository\SegmentRepository;
 use App\Tests\Support\ProjectFactory;
 use App\Tests\Support\UserFactory;
@@ -133,7 +134,8 @@ final class SegmentRepositoryTest extends KernelTestCase
 
         $broken = $this->segment($chapter, position: 0, sourceText: 'Zepsuty');
         $broken->setStatus(SegmentStatus::Failed);
-        $broken->setErrorMessage('Model nie zwrócił poprawnego tłumaczenia tego akapitu (3 prób).');
+        $broken->setErrorCode(WorkerError::ModelInvalidTranslation);
+        $broken->setErrorParams(['attempts' => 3]);
         $broken->incrementAttempts();
         $broken->incrementAttempts();
         $broken->incrementAttempts();
@@ -146,7 +148,8 @@ final class SegmentRepositoryTest extends KernelTestCase
 
         self::assertSame(SegmentStatus::Pending, $broken->getStatus());
         self::assertSame(0, $broken->getAttempts());
-        self::assertNull($broken->getErrorMessage());
+        self::assertNull($broken->getErrorCode());
+        self::assertNull($broken->getErrorParams());
     }
 
     public function testReportsFailedSegments(): void

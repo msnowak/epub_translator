@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Entity\SegmentStatus;
+use App\Entity\WorkerError;
 use App\Message\TranslateSegmentMessage;
 use App\Repository\SegmentRepository;
 use App\Translation\SegmentTranslator;
@@ -43,7 +44,7 @@ final readonly class TranslateSegmentHandler
             // Bez lancucha nie ma czego pauzowac - segment dostaje komunikat
             // i czeka na kolejne klikniecie uzytkownika.
             $segment->setStatus(SegmentStatus::Failed);
-            $segment->setErrorMessage('Serwer Ollama jest nieosiągalny. Sprawdź, czy działa, i spróbuj ponownie.');
+            $segment->setErrorCode(WorkerError::OllamaUnreachableSegment);
         }
 
         $this->entityManager->flush();

@@ -60,7 +60,8 @@ final readonly class UpdateSegmentProcessor implements ProcessorInterface
         // Reczna poprawka jest ostateczna: automatyczne ponawianie nigdy jej
         // nie nadpisze, zrobi to wylacznie jawny retranslate.
         $data->setStatus(SegmentStatus::Edited);
-        $data->setErrorMessage(null);
+        $data->setErrorCode(null);
+        $data->setErrorParams(null);
         $this->entityManager->flush();
 
         $this->exposer->expose($data);

@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Chapter;
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
+use App\Entity\WorkerError;
 use App\Repository\SegmentRepository;
 use App\Tests\Support\ProjectFactory;
 use App\Tests\Support\UserFactory;
@@ -28,7 +29,8 @@ final class SegmentRepositoryResetAttemptsTest extends KernelTestCase
         $entityManager->refresh($segment);
 
         self::assertSame(0, $segment->getAttempts());
-        self::assertNull($segment->getErrorMessage());
+        self::assertNull($segment->getErrorCode());
+        self::assertNull($segment->getErrorParams());
     }
 
     public function testLeavesOtherSegmentsAlone(): void
@@ -46,7 +48,8 @@ final class SegmentRepositoryResetAttemptsTest extends KernelTestCase
         // Masowy UPDATE bez warunku na identyfikator wyczyscilby cala tabele,
         // a testy patrzace tylko na jeden wiersz by tego nie zauwazyly.
         self::assertSame(3, $second->getAttempts());
-        self::assertSame('Model zgubił żeton formatowania.', $second->getErrorMessage());
+        self::assertSame(WorkerError::ModelInvalidTranslation, $second->getErrorCode());
+        self::assertSame(['attempts' => 3], $second->getErrorParams());
     }
 
     private function exhaustedSegment(EntityManagerInterface $entityManager): Segment
@@ -63,7 +66,8 @@ final class SegmentRepositoryResetAttemptsTest extends KernelTestCase
 
         $segment = new Segment($chapter, 0, 0, 0, 'A paragraph.', []);
         $segment->setStatus(SegmentStatus::Failed);
-        $segment->setErrorMessage('Model zgubił żeton formatowania.');
+        $segment->setErrorCode(WorkerError::ModelInvalidTranslation);
+        $segment->setErrorParams(['attempts' => 3]);
 
         for ($attempt = 0; $attempt < 3; ++$attempt) {
             $segment->incrementAttempts();

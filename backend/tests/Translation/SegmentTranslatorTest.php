@@ -9,6 +9,7 @@ use App\Entity\Project;
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
 use App\Entity\User;
+use App\Entity\WorkerError;
 use App\Ollama\OllamaUnavailableException;
 use App\Tests\Support\FakeTranslationEngine;
 use App\Tests\Support\RecordingLogger;
@@ -32,7 +33,7 @@ final class SegmentTranslatorTest extends TestCase
         self::assertSame(SegmentStatus::Translated, $segment->getStatus());
         self::assertSame('To jest [1]ważne[/1].', $segment->getTranslatedText());
         self::assertSame(1, $segment->getAttempts());
-        self::assertNull($segment->getErrorMessage());
+        self::assertNull($segment->getErrorCode());
     }
 
     public function testRetriesUntilTheAnswerValidates(): void
@@ -62,7 +63,8 @@ final class SegmentTranslatorTest extends TestCase
         self::assertSame(SegmentStatus::Failed, $segment->getStatus());
         self::assertSame(3, $segment->getAttempts());
         self::assertSame(3, $engine->callCount());
-        self::assertNotNull($segment->getErrorMessage());
+        self::assertSame(WorkerError::ModelInvalidTranslation, $segment->getErrorCode());
+        self::assertSame(['attempts' => 3], $segment->getErrorParams());
         self::assertNull($segment->getTranslatedText());
     }
 

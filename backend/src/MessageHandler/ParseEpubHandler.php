@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Entity\ProjectStatus;
+use App\Entity\WorkerError;
 use App\Epub\InvalidEpubException;
 use App\Epub\ProjectStructureWriter;
 use App\Message\ParseEpubMessage;
@@ -37,13 +38,15 @@ final readonly class ParseEpubHandler
         try {
             $this->writer->write($project, $this->storage->path($project));
             $project->setStatus(ProjectStatus::Ready);
-            $project->setErrorMessage(null);
+            $project->setErrorCode(null);
+            $project->setErrorParams(null);
         } catch (InvalidEpubException) {
             $project->setStatus(ProjectStatus::Failed);
-            // Trafia do interfejsu, wiec po polsku. Techniczny powod z wyjatku
-            // nie niesie uzytkownikowi zadnej uzytecznej informacji - plik i tak
-            // trzeba wgrac jeszcze raz.
-            $project->setErrorMessage('Nie udało się odczytać struktury pliku EPUB. Sprawdź, czy plik nie jest uszkodzony.');
+            // Worker nie ma zadania HTTP i nie zna jezyka uzytkownika, wiec
+            // zapisuje kod, nie zdanie - front sklada komunikat przy odczycie.
+            // Techniczny powod z wyjatku nie niesie uzytkownikowi zadnej
+            // uzytecznej informacji - plik i tak trzeba wgrac jeszcze raz.
+            $project->setErrorCode(WorkerError::EpubUnreadable);
         }
 
         $project->touch();

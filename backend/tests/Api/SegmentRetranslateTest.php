@@ -8,6 +8,7 @@ use App\Entity\Chapter;
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
 use App\Entity\User;
+use App\Entity\WorkerError;
 use App\Ollama\OllamaUnavailableException;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\FakeTranslationEngine;
@@ -127,7 +128,7 @@ final class SegmentRetranslateTest extends ApiTestCase
         // Pojedyncze ponowienie nie pauzuje projektu - nie ma tu lancucha do
         // zatrzymania. Segment wraca do stanu, z ktorego mozna sprobowac znowu.
         self::assertSame(SegmentStatus::Failed, $segment->getStatus());
-        self::assertNotNull($segment->getErrorMessage());
+        self::assertSame(WorkerError::OllamaUnreachableSegment, $segment->getErrorCode());
     }
 
     public function testStrangerCannotRetranslateSomeoneElsesSegment(): void

@@ -135,9 +135,14 @@ class Segment
     #[ORM\Column]
     private int $attempts = 0;
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true, enumType: WorkerError::class)]
     #[Groups(['segment:read'])]
-    private ?string $errorMessage = null;
+    private ?WorkerError $errorCode = null;
+
+    /** @var array<string, string|int>|null */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    #[Groups(['segment:read'])]
+    private ?array $errorParams = null;
 
     /**
      * Inline markup for the editor's live preview, already run through the same
@@ -243,14 +248,26 @@ class Segment
         ++$this->attempts;
     }
 
-    public function getErrorMessage(): ?string
+    public function getErrorCode(): ?WorkerError
     {
-        return $this->errorMessage;
+        return $this->errorCode;
     }
 
-    public function setErrorMessage(?string $errorMessage): void
+    public function setErrorCode(?WorkerError $errorCode): void
     {
-        $this->errorMessage = $errorMessage;
+        $this->errorCode = $errorCode;
+    }
+
+    /** @return array<string, string|int>|null */
+    public function getErrorParams(): ?array
+    {
+        return $this->errorParams;
+    }
+
+    /** @param array<string, string|int>|null $errorParams */
+    public function setErrorParams(?array $errorParams): void
+    {
+        $this->errorParams = $errorParams;
     }
 
     /** @return array<string, string> */

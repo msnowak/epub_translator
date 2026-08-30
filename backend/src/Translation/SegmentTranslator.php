@@ -6,6 +6,7 @@ namespace App\Translation;
 
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
+use App\Entity\WorkerError;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -33,7 +34,6 @@ final readonly class SegmentTranslator
     public function translate(Segment $segment, ?Segment $previous): void
     {
         $request = $this->promptBuilder->build($segment->getProject(), $segment, $previous);
-        $lastRejection = 'Model nie zwrócił poprawnego tłumaczenia tego akapitu.';
 
         while ($segment->getAttempts() < $this->maxAttempts) {
             // Wyjatek silnika leci wyzej, zanim policzymy probe: proba to
@@ -58,25 +58,23 @@ final readonly class SegmentTranslator
                     'reason' => $exception->getMessage(),
                 ]);
 
-                // Uzytkownikowi "token 2 closes out of order" nie pomoze -
-                // jedyne sensowne akcje to ponowienie albo reczna poprawka
-                // w edytorze.
-                $lastRejection = \sprintf(
-                    'Model nie zwrócił poprawnego tłumaczenia tego akapitu (%d prób).',
-                    $segment->getAttempts(),
-                );
-
                 continue;
             }
 
             $segment->setTranslatedText($translation);
             $segment->setStatus(SegmentStatus::Translated);
-            $segment->setErrorMessage(null);
+            $segment->setErrorCode(null);
+            $segment->setErrorParams(null);
 
             return;
         }
 
+        // Uzytkownikowi "token 2 closes out of order" nie pomoze - jedyne
+        // sensowne akcje to ponowienie albo reczna poprawka w edytorze. Liczba
+        // prob jedzie jako parametr, bo worker nie zna jezyka uzytkownika i nie
+        // moze ulozyc zdania sam - front sklada je przy odczycie.
         $segment->setStatus(SegmentStatus::Failed);
-        $segment->setErrorMessage($lastRejection);
+        $segment->setErrorCode(WorkerError::ModelInvalidTranslation);
+        $segment->setErrorParams(['attempts' => $segment->getAttempts()]);
     }
 }

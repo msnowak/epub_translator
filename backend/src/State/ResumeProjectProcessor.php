@@ -49,7 +49,8 @@ final readonly class ResumeProjectProcessor implements ProcessorInterface
         $this->segments->resetProcessingToPending($data);
 
         $data->setStatus(ProjectStatus::Translating);
-        $data->setErrorMessage(null);
+        $data->setErrorCode(null);
+        $data->setErrorParams(null);
         $data->touch();
         $this->entityManager->flush();
 

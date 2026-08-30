@@ -8,6 +8,7 @@ use App\Entity\Chapter;
 use App\Entity\Project;
 use App\Entity\ProjectStatus;
 use App\Entity\Segment;
+use App\Entity\WorkerError;
 use App\Message\TranslateNextSegmentMessage;
 use App\Ollama\OllamaUnavailableException;
 use App\Repository\SegmentRepository;
@@ -48,7 +49,7 @@ final class TranslateNextSegmentHandlerTest extends KernelTestCase
 
         self::assertSame(ProjectStatus::Completed, $project->getStatus());
         self::assertSame(2, $this->counts($project)['translated'] ?? 0);
-        self::assertNull($project->getErrorMessage());
+        self::assertNull($project->getErrorCode());
     }
 
     public function testProjectWithAFailedSegmentCompletesWithErrors(): void
@@ -83,7 +84,7 @@ final class TranslateNextSegmentHandlerTest extends KernelTestCase
         $this->entityManager->refresh($project);
 
         self::assertSame(ProjectStatus::Paused, $project->getStatus());
-        self::assertNotNull($project->getErrorMessage());
+        self::assertSame(WorkerError::OllamaUnreachableProject, $project->getErrorCode());
         self::assertSame(1, $this->counts($project)['pending'] ?? 0);
         self::assertSame(0, $this->counts($project)['processing'] ?? 0);
     }

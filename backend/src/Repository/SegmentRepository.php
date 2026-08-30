@@ -149,7 +149,8 @@ final class SegmentRepository extends ServiceEntityRepository
             // Literalne wyrazenia DQL, nie parametry: parametr o wartosci null
             // trafia do sterownika bez typu i Doctrine potrafi go odrzucic.
             ->set('s.attempts', '0')
-            ->set('s.errorMessage', 'NULL')
+            ->set('s.errorCode', 'NULL')
+            ->set('s.errorParams', 'NULL')
             ->where('s.project = :project')
             ->andWhere('s.status = :failed')
             ->setParameter('pending', SegmentStatus::Pending->value)
@@ -170,7 +171,8 @@ final class SegmentRepository extends ServiceEntityRepository
             // Literalne wyrazenia DQL, nie parametry: parametr o wartosci null
             // trafia do sterownika bez typu i Doctrine potrafi go odrzucic.
             ->set('s.attempts', '0')
-            ->set('s.errorMessage', 'NULL')
+            ->set('s.errorCode', 'NULL')
+            ->set('s.errorParams', 'NULL')
             ->where('s.id = :id')
             ->setParameter('id', $segment->getId(), 'uuid')
             ->getQuery()

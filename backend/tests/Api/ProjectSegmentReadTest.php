@@ -9,6 +9,7 @@ use App\Entity\Project;
 use App\Entity\Segment;
 use App\Entity\SegmentStatus;
 use App\Entity\User;
+use App\Entity\WorkerError;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ProjectFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -37,7 +38,8 @@ final class ProjectSegmentReadTest extends ApiTestCase
         // sortowania po rozdziale akapity by sie przeplotly.
         self::assertSame('Rozdział pierwszy', $payload[0]['chapter']['title']);
         self::assertSame('Rozdział drugi', $payload[1]['chapter']['title']);
-        self::assertSame('Model nie odpowiedział.', $payload[0]['errorMessage']);
+        self::assertSame('model_invalid_translation', $payload[0]['errorCode']);
+        self::assertSame(['attempts' => 3], $payload[0]['errorParams']);
     }
 
     public function testTheEmbeddedChapterCarriesOnlyWhatALabelNeeds(): void
@@ -150,7 +152,8 @@ final class ProjectSegmentReadTest extends ApiTestCase
 
             $bad = new Segment($chapter, 1, 1, 0, 'Broken.', []);
             $bad->setStatus(SegmentStatus::Failed);
-            $bad->setErrorMessage('Model nie odpowiedział.');
+            $bad->setErrorCode(WorkerError::ModelInvalidTranslation);
+            $bad->setErrorParams(['attempts' => 3]);
             $entityManager->persist($bad);
         }
 
@@ -170,7 +173,8 @@ final class ProjectSegmentReadTest extends ApiTestCase
         for ($position = 0; $position < $count; ++$position) {
             $segment = new Segment($chapter, $position, $position, 0, \sprintf('Broken %d.', $position), []);
             $segment->setStatus(SegmentStatus::Failed);
-            $segment->setErrorMessage('Model nie odpowiedział.');
+            $segment->setErrorCode(WorkerError::ModelInvalidTranslation);
+            $segment->setErrorParams(['attempts' => 3]);
             $entityManager->persist($segment);
         }
 

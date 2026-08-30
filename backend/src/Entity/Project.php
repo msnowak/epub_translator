@@ -187,9 +187,14 @@ class Project
     #[ORM\Column(length: 512, nullable: true)]
     private ?string $storagePath = null;
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true, enumType: WorkerError::class)]
     #[Groups(['project:read'])]
-    private ?string $errorMessage = null;
+    private ?WorkerError $errorCode = null;
+
+    /** @var array<string, string|int>|null */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    #[Groups(['project:read'])]
+    private ?array $errorParams = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     #[Groups(['project:read'])]
@@ -318,14 +323,26 @@ class Project
         $this->storagePath = $storagePath;
     }
 
-    public function getErrorMessage(): ?string
+    public function getErrorCode(): ?WorkerError
     {
-        return $this->errorMessage;
+        return $this->errorCode;
     }
 
-    public function setErrorMessage(?string $errorMessage): void
+    public function setErrorCode(?WorkerError $errorCode): void
     {
-        $this->errorMessage = $errorMessage;
+        $this->errorCode = $errorCode;
+    }
+
+    /** @return array<string, string|int>|null */
+    public function getErrorParams(): ?array
+    {
+        return $this->errorParams;
+    }
+
+    /** @param array<string, string|int>|null $errorParams */
+    public function setErrorParams(?array $errorParams): void
+    {
+        $this->errorParams = $errorParams;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

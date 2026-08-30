@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
+use App\Entity\WorkerError;
 use App\Repository\ProjectRepository;
 use App\Repository\SegmentRepository;
 use App\Tests\Support\ApiTestCase;
@@ -47,10 +48,7 @@ final class ProjectParsingTest extends ApiTestCase
         $project = self::getContainer()->get(ProjectRepository::class)->find($this->payload()['id']);
         self::assertNotNull($project);
         self::assertSame('failed', $project->getStatus()->value);
-        self::assertSame(
-            'Nie udało się odczytać struktury pliku EPUB. Sprawdź, czy plik nie jest uszkodzony.',
-            $project->getErrorMessage(),
-        );
+        self::assertSame(WorkerError::EpubUnreadable, $project->getErrorCode());
     }
 
     private function upload(string $token, string $path): void

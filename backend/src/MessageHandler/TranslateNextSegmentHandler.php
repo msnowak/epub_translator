@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\Entity\Project;
 use App\Entity\ProjectStatus;
 use App\Entity\SegmentStatus;
+use App\Entity\WorkerError;
 use App\Message\TranslateNextSegmentMessage;
 use App\Repository\ProjectRepository;
 use App\Repository\SegmentRepository;
@@ -59,7 +60,7 @@ final readonly class TranslateNextSegmentHandler
         } catch (TranslationEngineException) {
             $segment->setStatus(SegmentStatus::Pending);
             $project->setStatus(ProjectStatus::Paused);
-            $project->setErrorMessage('Serwer Ollama jest nieosiągalny. Sprawdź, czy działa, i wznów tłumaczenie.');
+            $project->setErrorCode(WorkerError::OllamaUnreachableProject);
             $project->touch();
             $this->entityManager->flush();
 
@@ -83,7 +84,8 @@ final readonly class TranslateNextSegmentHandler
         $project->setStatus($this->segments->hasFailed($project)
             ? ProjectStatus::CompletedWithErrors
             : ProjectStatus::Completed);
-        $project->setErrorMessage(null);
+        $project->setErrorCode(null);
+        $project->setErrorParams(null);
         $project->touch();
         $this->entityManager->flush();
     }
