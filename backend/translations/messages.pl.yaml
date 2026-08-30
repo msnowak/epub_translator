@@ -22,6 +22,3 @@ download.assembly_failed: 'Nie udało się złożyć pliku EPUB z tego projektu.
 auth.invalid_credentials: 'Nieprawidłowy e-mail lub hasło.'
 token.refresh_missing: 'Brak tokenu odświeżającego.'
 token.session_expired: 'Sesja wygasła. Zaloguj się ponownie.'
-upload.structure_unreadable: 'Nie udało się odczytać struktury pliku EPUB. Sprawdź, czy plik nie jest uszkodzony.'
-segment.translation_invalid: 'Model nie zwrócił poprawnego tłumaczenia tego akapitu.'
-segment.translation_invalid_after_attempts: 'Model nie zwrócił poprawnego tłumaczenia tego akapitu (%attempts% prób).'

@@ -67,14 +67,6 @@ final class ProjectParsingTest extends ApiTestCase
             server: [
                 'HTTP_ACCEPT' => 'application/json',
                 'HTTP_AUTHORIZATION' => 'Bearer '.$token,
-                // Symfony\Component\HttpFoundation\Request::create() bakes in
-                // 'en-us,en;q=0.5' as a default Accept-Language whenever the
-                // caller does not set one - a fixture for tests, not a real
-                // client's behaviour. ParseEpubMessage runs synchronously in
-                // this env (config/packages/test/messenger.yaml), inheriting
-                // this request's negotiated locale, so overriding it back to
-                // null is the only way to actually exercise "no header".
-                'HTTP_ACCEPT_LANGUAGE' => null,
             ],
         );
     }
