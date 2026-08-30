@@ -11,6 +11,47 @@ paragraph by paragraph, pause and resume the run, correct individual
 paragraphs in a three-column editor with a live chapter preview, and download
 the result as an EPUB that opens in a reader.
 
+## Interface language
+
+The interface is available in Polish and English, Polish by default. A
+switcher sits in the application header, and a second copy sits on the
+sign-in and registration screens - those are reached before the app knows who
+is logged in, so the header itself is not on screen yet to hold one. The
+choice is remembered per browser, in `localStorage` under
+`epubTranslator.locale`. On a first visit, with nothing stored yet, it is
+guessed from the browser's `navigator.languages`, falling back to Polish if
+neither language it lists is one of the two offered.
+
+Whatever is chosen goes out on every API request as an `Accept-Language`
+header, and Symfony negotiates the request locale from it against
+`enabled_locales` in `framework.yaml`. That covers translated response
+content, but not everything a running translation can fail with - and the two
+halves of failure get answered differently. An error raised while handling a
+request is raised inside that request, with a language to answer in, so the
+backend translates it there and then. An error written by the Messenger
+worker has no request behind it - it runs detached, in the background - and
+so no language to answer in either. It is stored instead as
+a machine-readable code plus parameters (`errorCode` and `errorParams` on
+`Project` and `Segment`, backed by the `WorkerError` enum), and the frontend
+turns that code into a sentence from its own catalog, in whatever language is
+currently active.
+
+**Adding a language.** Create `frontend/src/i18n/<code>.ts`, typed as
+`Messages`, and export a catalog literal from it - typing it as `Messages`
+means a key missing from that literal is a compile error, not a silent
+fallback to Polish at runtime. Add the code to `LOCALES`, `CATALOGS` and
+`LOCALE_NAMES` in `frontend/src/i18n/`: the latter two are declared as
+`Record<Locale, ...>`, so the compiler stops you if you add the code to one
+and forget the other. On the backend, add `messages.<code>.yaml` and
+`validators.<code>.yaml` under `backend/translations/`, and add the code to
+`enabled_locales` in `backend/config/packages/framework.yaml`. From there,
+the catalog parity test (`frontend/src/i18n/catalogs.test.ts`) iterates every
+registered locale against the Polish catalog and reports the rest of the way:
+a key present in Polish and missing from yours, a translated string whose
+`{placeholder}` set does not match the Polish original, and - checked against
+what `Intl.PluralRules` actually resolves for that locale - a plural entry
+missing a category the language needs or carrying one it does not.
+
 ## Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Compose v2)
