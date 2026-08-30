@@ -1,27 +1,33 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { ApiError } from '../api/problem'
 import { useAuth } from '../auth/useAuth'
+import { useT } from '../i18n/useT'
+import type { Translate } from '../i18n/messages'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 
-const schema = z.object({
-  email: z.email('To nie jest poprawny adres e-mail.'),
-  // Lustro reguly z backendu: User::$plainPassword ma Length(min: 8).
-  password: z.string().min(8, 'Hasło musi mieć co najmniej 8 znaków.'),
-})
+function buildSchema(t: Translate) {
+  return z.object({
+    email: z.email(t('validation.email.invalid')),
+    // Lustro reguly z backendu: User::$plainPassword ma Length(min: 8).
+    password: z.string().min(8, t('validation.password.tooShort')),
+  })
+}
 
-type Values = z.infer<typeof schema>
+type Values = z.infer<ReturnType<typeof buildSchema>>
 
 export function RegisterPage() {
+  const { t } = useT()
   const { signUp } = useAuth()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState<string | null>(null)
+  const schema = useMemo(() => buildSchema(t), [t])
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { email: '', password: '' },
@@ -35,7 +41,7 @@ export function RegisterPage() {
       navigate('/', { replace: true })
     } catch (error) {
       if (!(error instanceof ApiError)) {
-        setServerError('Nie udało się połączyć z serwerem.')
+        setServerError(t('common.networkError'))
 
         return
       }
@@ -65,17 +71,17 @@ export function RegisterPage() {
       <div className="flex justify-end">
         <LocaleSwitcher />
       </div>
-      <h1 className="text-2xl font-semibold">Załóż konto</h1>
+      <h1 className="text-2xl font-semibold">{t('auth.register.heading')}</h1>
       <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="email">Adres e-mail</Label>
+          <Label htmlFor="email">{t('auth.email')}</Label>
           <Input id="email" type="email" autoComplete="email" {...form.register('email')} />
           {form.formState.errors.email ? (
             <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
           ) : null}
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="password">Hasło</Label>
+          <Label htmlFor="password">{t('auth.password')}</Label>
           <Input
             id="password"
             type="password"
@@ -88,13 +94,13 @@ export function RegisterPage() {
         </div>
         {null !== serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
         <Button type="submit" disabled={form.formState.isSubmitting}>
-          Załóż konto
+          {t('auth.register.submit')}
         </Button>
       </form>
       <p className="text-sm text-neutral-600">
-        Masz już konto?{' '}
+        {t('auth.haveAccount')}{' '}
         <Link className="underline" to="/login">
-          Zaloguj się
+          {t('auth.signIn')}
         </Link>
         .
       </p>

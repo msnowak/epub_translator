@@ -1,9 +1,11 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { useT } from '../i18n/useT'
 import { Button } from '@/components/ui/button'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 
 export function AppLayout({ wide = false }: { wide?: boolean }) {
+  const { t } = useT()
   const { signOut } = useAuth()
   const navigate = useNavigate()
 
@@ -17,12 +19,12 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
       <header className="border-b">
         <div className={`flex items-center justify-between p-4 ${wide ? 'px-6' : 'mx-auto max-w-4xl'}`}>
           <Link className="font-semibold" to="/">
-            EPUB Translator
+            {t('app.name')}
           </Link>
           <div className="flex items-center gap-2">
             <LocaleSwitcher />
             <Button variant="secondary" onClick={onSignOut}>
-              Wyloguj się
+              {t('app.signOut')}
             </Button>
           </div>
         </div>

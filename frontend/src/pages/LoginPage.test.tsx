@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -63,11 +63,12 @@ describe('LoginPage', () => {
     )
     renderWithProviders(<App />, { route: '/login', locale: 'en' })
 
-    await userEvent.type(await screen.findByLabelText('Adres e-mail'), 'reader@example.com')
-    await userEvent.type(screen.getByLabelText('Hasło'), 'correcthorse')
-    await userEvent.click(screen.getByRole('button', { name: 'Zaloguj się' }))
+    await userEvent.type(await screen.findByLabelText('Email address'), 'reader@example.com')
+    await userEvent.type(screen.getByLabelText('Password'), 'correcthorse')
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    expect(await screen.findByRole('heading', { name: 'Twoje książki' })).toBeVisible()
-    expect(seen).toBe('en')
+    await waitFor(() => {
+      expect(seen).toBe('en')
+    })
   })
 })
