@@ -19,13 +19,13 @@ export function ProjectListPage() {
   })
 
   if (isPending) {
-    return <p className="text-neutral-500">Wczytywanie…</p>
+    return <p className="text-neutral-500">{t('common.loading')}</p>
   }
 
   if (isError) {
     return (
       <p className="text-red-600">
-        {error instanceof ApiError ? error.detail : 'Nie udało się połączyć z serwerem.'}
+        {error instanceof ApiError ? error.detail : t('common.networkError')}
       </p>
     )
   }
@@ -33,15 +33,15 @@ export function ProjectListPage() {
   return (
     <section className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Twoje książki</h1>
+        <h1 className="text-2xl font-semibold">{t('projects.list.heading')}</h1>
         {/* Link ostylowany jak przycisk: ten wariant shadcn stoi na Base UI,
             ktore nie zna "asChild" - podmiana elementu idzie przez klasy. */}
         <Link className={buttonVariants()} to="/projects/new">
-          Wgraj książkę
+          {t('projects.list.upload')}
         </Link>
       </div>
       {0 === data.length ? (
-        <p className="text-neutral-600">Nie masz jeszcze żadnej książki.</p>
+        <p className="text-neutral-600">{t('projects.list.empty')}</p>
       ) : (
         <ul className="flex flex-col gap-4">
           {data.map((project) => (

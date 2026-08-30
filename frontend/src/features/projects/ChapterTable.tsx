@@ -7,16 +7,16 @@ export function ChapterTable({ chapters, projectId }: { chapters: Chapter[]; pro
   const { t } = useT()
 
   if (0 === chapters.length) {
-    return <p className="text-neutral-600">Rozdziały pojawią się, gdy plik zostanie przeanalizowany.</p>
+    return <p className="text-neutral-600">{t('chapters.empty')}</p>
   }
 
   return (
     <table className="w-full text-left text-sm">
       <thead>
         <tr className="border-b">
-          <th className="py-2">Rozdział</th>
-          <th className="py-2">Przetłumaczone</th>
-          <th className="py-2">Nieudane</th>
+          <th className="py-2">{t('chapters.column.chapter')}</th>
+          <th className="py-2">{t('chapters.column.translated')}</th>
+          <th className="py-2">{t('chapters.column.failed')}</th>
         </tr>
       </thead>
       <tbody>
@@ -31,9 +31,11 @@ export function ChapterTable({ chapters, projectId }: { chapters: Chapter[]; pro
                 </Link>
               </td>
               <td className="py-2">
-                {translated + edited} z {chapter.totalSegments}
+                {t('chapters.translatedOf', { done: translated + edited, total: chapter.totalSegments })}
               </td>
-              <td className="py-2">{failed > 0 ? `${failed} nieudane` : '—'}</td>
+              <td className="py-2">
+                {failed > 0 ? t('chapters.failedCount', { count: failed }) : '—'}
+              </td>
             </tr>
           )
         })}

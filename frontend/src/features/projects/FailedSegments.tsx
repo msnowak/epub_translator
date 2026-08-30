@@ -13,19 +13,19 @@ export function FailedSegments({ projectId }: { projectId: string }) {
   })
 
   if (isPending) {
-    return <p className="text-neutral-500">Wczytywanie…</p>
+    return <p className="text-neutral-500">{t('common.loading')}</p>
   }
 
   if (isError) {
     return (
       <p className="text-red-600">
-        {error instanceof ApiError ? error.detail : 'Nie udało się połączyć z serwerem.'}
+        {error instanceof ApiError ? error.detail : t('common.networkError')}
       </p>
     )
   }
 
   if (0 === data.length) {
-    return <p className="text-neutral-600">Żaden akapit nie zgłosił błędu.</p>
+    return <p className="text-neutral-600">{t('failed.none')}</p>
   }
 
   return (
@@ -37,7 +37,7 @@ export function FailedSegments({ projectId }: { projectId: string }) {
             // Edytor odczyta ?paragraph= i przewinie do tego wiersza.
             to={`/projects/${projectId}/chapters/${segment.chapter.id}?paragraph=${segment.id}`}
           >
-            {chapterLabel(segment.chapter, t)}, akapit {segment.position + 1}
+            {t('failed.link', { chapter: chapterLabel(segment.chapter, t), position: segment.position + 1 })}
           </Link>
           <p className="mt-1 text-neutral-700">{segment.sourceText.slice(0, 160)}</p>
           {null !== segment.errorMessage ? <p className="mt-1 text-red-700">{segment.errorMessage}</p> : null}

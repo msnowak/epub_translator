@@ -27,13 +27,13 @@ export function ProjectDetailPage() {
   })
 
   if (isPending) {
-    return <p className="text-neutral-500">Wczytywanie…</p>
+    return <p className="text-neutral-500">{t('common.loading')}</p>
   }
 
   if (isError) {
     return (
       <p className="text-red-600">
-        {error instanceof ApiError ? error.detail : 'Nie udało się połączyć z serwerem.'}
+        {error instanceof ApiError ? error.detail : t('common.networkError')}
       </p>
     )
   }
@@ -44,19 +44,17 @@ export function ProjectDetailPage() {
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <Link className="text-sm underline" to="/">
-          ← Wszystkie książki
+          ← {t('projects.detail.back')}
         </Link>
         <h1 className="text-2xl font-semibold">{data.title}</h1>
         <p className="text-sm font-medium">{t(PROJECT_STATUS_KEYS[data.status])}</p>
         <p className="text-sm text-neutral-600">
-          {data.sourceLanguage ?? 'język wykrywany'} → {data.targetLanguage} · {data.ollamaModel} ·{' '}
-          {data.originalFilename}
+          {data.sourceLanguage ?? t('projects.detail.detectedLanguage')} → {data.targetLanguage} ·{' '}
+          {data.ollamaModel} · {data.originalFilename}
         </p>
         <ProgressBar project={data} />
         {failed > 0 ? (
-          <p className="text-sm text-red-600">
-            {failed} akapitów nie udało się przetłumaczyć. Możesz je ponowić.
-          </p>
+          <p className="text-sm text-red-600">{t('projects.detail.failedNotice', { count: failed })}</p>
         ) : null}
         {null !== data.errorMessage ? (
           <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -68,17 +66,15 @@ export function ProjectDetailPage() {
       <ProjectActions project={data} />
 
       <div className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Rozdziały</h2>
+        <h2 className="text-lg font-medium">{t('projects.detail.chapters')}</h2>
         {chapters.isError ? (
           <p className="text-red-600">
-            {chapters.error instanceof ApiError
-              ? chapters.error.detail
-              : 'Nie udało się połączyć z serwerem.'}
+            {chapters.error instanceof ApiError ? chapters.error.detail : t('common.networkError')}
           </p>
         ) : chapters.isPending ? (
           // Osobny stan, bo pusta tabela mowi "rozdzialow jeszcze nie ma",
           // a to nieprawda, dopoki zapytanie leci.
-          <p className="text-neutral-500">Wczytywanie…</p>
+          <p className="text-neutral-500">{t('common.loading')}</p>
         ) : (
           <ChapterTable chapters={chapters.data} projectId={id} />
         )}
@@ -86,7 +82,7 @@ export function ProjectDetailPage() {
 
       {failed > 0 ? (
         <div className="flex flex-col gap-2">
-          <h2 className="text-lg font-medium">Nieudane akapity</h2>
+          <h2 className="text-lg font-medium">{t('projects.detail.failedHeading')}</h2>
           <FailedSegments projectId={id} />
         </div>
       ) : null}

@@ -1,35 +1,41 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { ApiError } from '../../api/problem'
 import { listOllamaModels } from '../../api/ollama'
 import { createProject } from '../../api/projects'
+import { useT } from '../../i18n/useT'
+import type { Translate } from '../../i18n/messages'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
-const schema = z.object({
-  file: z.custom<FileList>(
-    (value) => value instanceof FileList && value.length > 0,
-    'Wybierz plik EPUB.',
-  ),
-  title: z.string().min(1, 'Podaj tytuł projektu.'),
-  sourceLanguage: z.string(),
-  targetLanguage: z.string().min(1, 'Wybierz język docelowy.'),
-  ollamaModel: z.string().min(1, 'Wybierz model.'),
-  customPrompt: z.string(),
-})
+function buildSchema(t: Translate) {
+  return z.object({
+    file: z.custom<FileList>(
+      (value) => value instanceof FileList && value.length > 0,
+      t('validation.file.required'),
+    ),
+    title: z.string().min(1, t('validation.title.required')),
+    sourceLanguage: z.string(),
+    targetLanguage: z.string().min(1, t('validation.targetLanguage.required')),
+    ollamaModel: z.string().min(1, t('validation.model.required')),
+    customPrompt: z.string(),
+  })
+}
 
-type Values = z.infer<typeof schema>
+type Values = z.infer<ReturnType<typeof buildSchema>>
 
 export function ProjectWizardPage() {
+  const { t } = useT()
   const navigate = useNavigate()
   const [serverError, setServerError] = useState<string | null>(null)
   const models = useQuery({ queryKey: ['ollama-models'], queryFn: listOllamaModels })
+  const schema = useMemo(() => buildSchema(t), [t])
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -70,16 +76,16 @@ export function ProjectWizardPage() {
     } catch (error) {
       // Upload odpowiada golym "detail", bez tablicy violations - pokazujemy
       // dokladnie to, co przyszlo.
-      setServerError(error instanceof ApiError ? error.detail : 'Nie udało się połączyć z serwerem.')
+      setServerError(error instanceof ApiError ? error.detail : t('common.networkError'))
     }
   }
 
   return (
     <section className="flex max-w-xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Wgraj książkę</h1>
+      <h1 className="text-2xl font-semibold">{t('wizard.heading')}</h1>
       <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="file">Plik EPUB</Label>
+          <Label htmlFor="file">{t('wizard.file')}</Label>
           <Input
             id="file"
             type="file"
@@ -92,7 +98,7 @@ export function ProjectWizardPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="title">Tytuł</Label>
+          <Label htmlFor="title">{t('wizard.title')}</Label>
           <Input id="title" {...form.register('title')} />
           {form.formState.errors.title ? (
             <p className="text-sm text-red-600">{form.formState.errors.title.message}</p>
@@ -100,19 +106,17 @@ export function ProjectWizardPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="sourceLanguage">Język źródłowy</Label>
+          <Label htmlFor="sourceLanguage">{t('wizard.sourceLanguage')}</Label>
           <Input id="sourceLanguage" {...form.register('sourceLanguage')} />
-          <p className="text-sm text-neutral-600">
-            Możesz zostawić puste — wtedy model rozpozna język sam.
-          </p>
+          <p className="text-sm text-neutral-600">{t('wizard.sourceLanguage.hint')}</p>
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="targetLanguage">Język docelowy</Label>
+          <Label htmlFor="targetLanguage">{t('wizard.targetLanguage')}</Label>
           <Input id="targetLanguage" {...form.register('targetLanguage')} />
           <p className="text-sm text-neutral-600">
-            Kod języka, np. <code>pl</code>, <code>en</code>, <code>de</code>. Ta wartość trafia
-            wprost do metadanych pobranej książki.
+            {t('wizard.targetLanguage.hintLead')} <code>pl</code>, <code>en</code>, <code>de</code>.{' '}
+            {t('wizard.targetLanguage.hintTail')}
           </p>
           {form.formState.errors.targetLanguage ? (
             <p className="text-sm text-red-600">{form.formState.errors.targetLanguage.message}</p>
@@ -120,7 +124,7 @@ export function ProjectWizardPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="ollamaModel">Model</Label>
+          <Label htmlFor="ollamaModel">{t('wizard.model')}</Label>
           {/* Zwykly <select>, nie komponent shadcn: lista pochodzi z serwera,
               a natywna kontrolka jest dostepna z klawiatury bez naszej pomocy. */}
           <select
@@ -129,7 +133,7 @@ export function ProjectWizardPage() {
             disabled={!models.isSuccess}
             {...form.register('ollamaModel')}
           >
-            <option value="">Wybierz model…</option>
+            <option value="">{t('wizard.model.placeholder')}</option>
             {(models.data ?? []).map((model) => (
               <option key={model} value={model}>
                 {model}
@@ -138,9 +142,7 @@ export function ProjectWizardPage() {
           </select>
           {models.isError ? (
             <p className="text-sm text-red-600">
-              {models.error instanceof ApiError
-                ? models.error.detail
-                : 'Nie udało się połączyć z serwerem.'}
+              {models.error instanceof ApiError ? models.error.detail : t('common.networkError')}
             </p>
           ) : null}
           {form.formState.errors.ollamaModel ? (
@@ -149,14 +151,14 @@ export function ProjectWizardPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="customPrompt">Dodatkowe wskazówki dla modelu</Label>
+          <Label htmlFor="customPrompt">{t('wizard.customPrompt')}</Label>
           <Textarea id="customPrompt" rows={3} {...form.register('customPrompt')} />
         </div>
 
         {null !== serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
 
         <Button type="submit" disabled={form.formState.isSubmitting || !models.isSuccess}>
-          Wgraj i utwórz projekt
+          {t('wizard.submit')}
         </Button>
       </form>
     </section>
