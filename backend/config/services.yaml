@@ -37,12 +37,6 @@ services:
 
     App\Translation\TranslationEngineInterface: '@App\Ollama\OllamaClient'
 
-    # Bez bundla monologa LoggerInterface nie jest autowirowalny, a wlasny
-    # logger Symfony'ego (stderr) jak najbardziej istnieje - stad jawne wpiecie.
-    App\Translation\SegmentTranslator:
-        arguments:
-            $logger: '@logger'
-
     App\Security\RefreshTokenManager:
         arguments:
             $secureCookie: '%app.refresh_cookie_secure%'

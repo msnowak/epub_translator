@@ -1,0 +1,28 @@
+when@dev:
+    monolog:
+        handlers:
+            main:
+                type: stream
+                path: php://stderr
+                level: debug
+                channels: ["!event", "!doctrine"]
+
+when@test:
+    monolog:
+        handlers:
+            main:
+                type: "null"
+
+when@prod:
+    monolog:
+        handlers:
+            # Swiadomie nie fingers_crossed z recepty. Odrzucenie akapitu nigdy
+            # nie podnosi wyjatku, wiec bufor nie mialby sie od czego zrzucic i
+            # notice ze SegmentTranslatora przepadlby tak samo jak przed
+            # wprowadzeniem monologa. Pilnuje tego
+            # tests/Configuration/MonologProductionHandlerTest.php.
+            main:
+                type: stream
+                path: php://stderr
+                level: notice
+                channels: ["!event", "!doctrine"]
