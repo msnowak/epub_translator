@@ -352,6 +352,23 @@ To see what the worker is doing, including why a paragraph was rejected:
 docker compose logs -f worker
 ```
 
+Under the production profile that service is named `worker-prod`:
+
+```bash
+docker compose --profile prod logs -f worker-prod
+```
+
+Both profiles also start Dozzle, which shows the same streams in a browser with
+filtering, search and live tail:
+
+```
+http://localhost:9999
+```
+
+It is bound to the loopback interface deliberately. Dozzle reads logs through
+the Docker socket, which grants control of the daemon regardless of the
+read-only mount, so it must not be published beyond localhost.
+
 ## Running tests and static analysis
 
 ```bash
