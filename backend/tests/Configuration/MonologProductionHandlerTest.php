@@ -30,6 +30,14 @@ final class MonologProductionHandlerTest extends TestCase
      * nam zalezy - handler nie moze buforowac - a nie konkretna implementacje,
      * wiec pozniejsza zmiana stream na rotating_file nie wywola falszywego
      * alarmu.
+     *
+     * Jest jeszcze trzeci sposob, zeby po cichu zgubic ten sam rekord: nie
+     * zmieniac handlera wcale, tylko odciac od niego kanal "app", na ktorym
+     * SegmentTranslator loguje. Dopisanie "channels: [\"!app\"]" do bloku
+     * handlera przeszloby oba powyzsze sprawdzenia bez problemu i wrocilby
+     * dokladnie ten sam blad. Dlatego pilnujemy tu i tego: lista kanalow nie
+     * moze wykluczac "app", a jesli jest lista wlaczajaca (wpisy bez "!" na
+     * poczatku), to musi go wymieniac wprost.
      */
     public function testProductionHandlerLetsNoticeRecordsThrough(): void
     {
@@ -53,5 +61,26 @@ final class MonologProductionHandlerTest extends TestCase
             ['debug', 'info', 'notice'],
             'Prog produkcyjnego handlera odcina notice - a to jedyny poziom, na ktorym loguje SegmentTranslator.',
         );
+
+        $channels = $main['channels'] ?? [];
+
+        self::assertNotContains(
+            '!app',
+            $channels,
+            'Kanal "app" jest wylaczony z produkcyjnego handlera - SegmentTranslator loguje na nim, wiec jego notice nigdzie by nie trafil.',
+        );
+
+        $inclusiveEntries = array_filter(
+            $channels,
+            static fn (mixed $channel): bool => !str_starts_with((string) $channel, '!'),
+        );
+
+        if ($inclusiveEntries !== []) {
+            self::assertContains(
+                'app',
+                $channels,
+                'Lista kanalow jest wlaczajaca (bez "!" na poczatku wpisow) i nie wymienia "app" - SegmentTranslator loguje na tym kanale, wiec jego notice by przez nia nie przeszedl.',
+            );
+        }
     }
 }

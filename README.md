@@ -150,13 +150,13 @@ docker compose --profile prod up -d --build
 ```
 
 `--profile prod` overrides `COMPOSE_PROFILES` rather than adding to it, which
-is exactly what makes this bring up only `db`, `backend-prod`, `worker-prod`
-and `frontend-prod` - the `dev` services stay down. It publishes the same
-host ports as the development profile (8000 and 5173), so the two profiles
-cannot run at the same time; stop one before starting the other. Note also
-that `docker compose --profile prod down` stops `db` along with the rest -
-expected, since `db` deliberately carries no profile of its own and belongs
-to both.
+is exactly what makes this bring up only `db`, `dozzle`, `backend-prod`,
+`worker-prod` and `frontend-prod` - the `dev` services stay down. It publishes
+the same host ports as the development profile (8000 and 5173), so the two
+profiles cannot run at the same time; stop one before starting the other.
+Note also that `docker compose --profile prod down` stops `db` and `dozzle`
+along with the rest - expected, since both deliberately carry no profile of
+their own and belong to both.
 
 Two steps are deliberately manual: generating the keypair is one-time,
 running migrations is whenever one is pending.
@@ -365,6 +365,9 @@ filtering, search and live tail:
 http://localhost:9999
 ```
 
+The port follows `DOZZLE_PORT` (`.env.example` documents it), so it moves if
+you change that variable.
+
 It is bound to the loopback interface deliberately. Dozzle reads logs through
 the Docker socket, which grants control of the daemon regardless of the
 read-only mount, so it must not be published beyond localhost.
@@ -433,10 +436,11 @@ Each of these is a decision this stage made deliberately, not an oversight:
 
 ## Troubleshooting
 
-**`docker compose up` starts only the database.** Your `.env` predates the
-production profile and has no `COMPOSE_PROFILES` line. Every service except
-`db` now belongs to a profile, so with none selected nothing else comes up.
-Add `COMPOSE_PROFILES=dev` to `.env` (it is in `.env.example`).
+**`docker compose up` starts only the database and Dozzle.** Your `.env`
+predates the production profile and has no `COMPOSE_PROFILES` line. Every
+service except `db` and `dozzle` now belongs to a profile, so with none
+selected only those two come up. Add `COMPOSE_PROFILES=dev` to `.env` (it is
+in `.env.example`).
 
 **Logging in works, but reloading the page throws you back to the login
 screen.** The access token lives in memory only, so after a reload the app

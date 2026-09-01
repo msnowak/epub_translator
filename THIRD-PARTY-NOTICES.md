@@ -114,10 +114,11 @@ These are installed into `vendor/` inside the production image.
 | doctrine/doctrine-migrations-bundle | MIT |
 | doctrine/orm | MIT |
 | lexik/jwt-authentication-bundle | MIT |
+| monolog/monolog | MIT |
 | nelmio/cors-bundle | MIT |
 | phpdocumentor/reflection-docblock | MIT |
 | phpstan/phpdoc-parser | MIT |
-| symfony/* (asset, console, doctrine-messenger, dotenv, expression-language, filesystem, flex, framework-bundle, http-client, messenger, property-access, property-info, runtime, security-bundle, serializer, translation, twig-bundle, validator, yaml) | MIT |
+| symfony/* (asset, console, doctrine-messenger, dotenv, expression-language, filesystem, flex, framework-bundle, http-client, messenger, monolog-bridge, monolog-bundle, property-access, property-info, runtime, security-bundle, serializer, translation, twig-bundle, validator, yaml) | MIT |
 
 Two transitive runtime packages are BSD-3-Clause rather than MIT:
 `twig/twig` (Copyright (c) 2009-present, the Twig Team) and `lcobucci/jwt`
@@ -140,12 +141,17 @@ it brings with it are BSD-3-Clause, Copyright (c) Sebastian Bergmann and
 others. None of them are installed into the production image, which runs
 `composer install --no-dev`.
 
-## Container base images
+## Container images
 
 The Dockerfiles build on images that are redistributed if you publish the
 result: `dunglas/frankenphp` (MIT), `caddy` (Apache-2.0), `node` (MIT, on
 Alpine Linux) and `composer/composer` (MIT). Each carries its own licences
 and the licences of the distribution packages inside it.
+
+`compose.yaml` also runs `amir20/dozzle:v8` (MIT, Copyright (c) 2025 Amir
+Raminfar) unmodified as the container-log viewer. It is not a base image -
+nothing here builds on top of it - but it ships as part of the stack this
+project hands you, so it is credited here too.
 
 ## Language models
 
